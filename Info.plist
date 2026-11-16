@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>Ada</string>
+  <key>CFBundleDisplayName</key><string>Ada</string>
+  <key>CFBundleIdentifier</key><string>app.ada.notch</string>
+  <key>CFBundleExecutable</key><string>Ada</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.1</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSUIElement</key><true/>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSAppleEventsUsageDescription</key><string>Ada, müziği kontrol etmek ve asistanın istediğiniz işlemleri yapabilmesi için diğer uygulamalara komut gönderir.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>Ada, yaklaşan etkinlikleri göstermek ve asistanın etkinlik ekleyebilmesi için takviminize erişir.</string>
+  <key>NSRemindersFullAccessUsageDescription</key><string>Ada, anımsatıcılarınızı göstermek ve asistanın anımsatıcı ekleyebilmesi için erişim ister.</string>
+  <key>NSLocationUsageDescription</key><string>Ada, bulunduğunuz yerin hava durumunu göstermek için konumunuzu kullanır.</string>
+  <key>NSLocationWhenInUseUsageDescription</key><string>Ada, bulunduğunuz yerin hava durumunu göstermek için konumunuzu kullanır.</string>
+  <key>NSCameraUsageDescription</key><string>Ada, Ayna modülünde kendinizi görebilmeniz için kamerayı kullanır.</string>
+  <key>NSMicrophoneUsageDescription</key><string>Ada, asistanla sesli konuşabilmeniz için mikrofonu kullanır.</string>
+  <key>NSSpeechRecognitionUsageDescription</key><string>Ada, söylediklerinizi yazıya çevirmek için konuşma tanımayı kullanır.</string>
+  <key>NSBluetoothAlwaysUsageDescription</key><string>Ada, bağlanan Bluetooth cihazlarını çentikte göstermek için Bluetooth'u kullanır.</string>
+</dict>
+</plist>
