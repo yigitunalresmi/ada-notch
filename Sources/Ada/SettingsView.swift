@@ -1,53 +1,259 @@
 import ServiceManagement
 import SwiftUI
 
-struct SettingsView: View {
-    var body: some View {
-        TabView {
-            ModulesSettings().tabItem { Label(L("Modüller"), systemImage: "square.grid.2x2") }
-            AppearanceSettings().tabItem { Label(L("Görünüm"), systemImage: "paintbrush") }
-            AssistantSettings().tabItem { Label(L("Asistan"), systemImage: "sparkles") }
-            GeneralSettings().tabItem { Label(L("Genel"), systemImage: "gearshape") }
+enum SettingsPage: String, CaseIterable, Identifiable {
+    case modules, appearance, assistant, general, updates
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .modules: return L("Modüller")
+        case .appearance: return L("Görünüm")
+        case .assistant: return L("Asistan")
+        case .general: return L("Genel")
+        case .updates: return L("Güncellemeler")
         }
-        .padding(.top, 8)
-        .frame(width: 620, height: 560)
+    }
+
+    var icon: String {
+        switch self {
+        case .modules: return "square.grid.2x2.fill"
+        case .appearance: return "paintbrush.fill"
+        case .assistant: return "sparkles"
+        case .general: return "gearshape.fill"
+        case .updates: return "arrow.down.circle.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .modules: return .blue
+        case .appearance: return .purple
+        case .assistant: return .orange
+        case .general: return .gray
+        case .updates: return .green
+        }
+    }
+}
+
+struct SettingsView: View {
+    @State private var page: SettingsPage = .modules
+    @ObservedObject var updater = Updater.shared
+    @ObservedObject var prefs = Prefs.shared
+    @Namespace private var selection
+
+    var body: some View {
+        HStack(spacing: 0) {
+            sidebar
+            Divider()
+            VStack(spacing: 0) {
+                Text(page.title)
+                    .font(.title2.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 26)
+                    .padding(.top, 18)
+                    .padding(.bottom, 2)
+                Group {
+                    switch page {
+                    case .modules: ModulesSettings()
+                    case .appearance: AppearanceSettings()
+                    case .assistant: AssistantSettings()
+                    case .general: GeneralSettings()
+                    case .updates: UpdatesSettings()
+                    }
+                }
+                .id(page)
+                .transition(.opacity.combined(with: .offset(y: 6)))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(width: 800, height: 600)
+        .animation(.easeInOut(duration: 0.18), value: page)
+    }
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 10) {
+                AppBadge(size: 38)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Ada").font(.headline)
+                    Text(Lf("Sürüm %@", Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.top, 44)
+            .padding(.bottom, 14)
+
+            ForEach(SettingsPage.allCases) { item in
+                Button { page = item } label: {
+                    HStack(spacing: 9) {
+                        Image(systemName: item.icon)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 24, height: 24)
+                            .background(item.color.gradient, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        Text(item.title).font(.system(size: 13, weight: page == item ? .semibold : .regular))
+                        Spacer(minLength: 0)
+                        if item == .updates, updater.updateAvailable {
+                            Circle().fill(.blue).frame(width: 8, height: 8)
+                        }
+                    }
+                    .padding(.horizontal, 8).padding(.vertical, 6)
+                    .background {
+                        if page == item {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.primary.opacity(0.1))
+                                .matchedGeometryEffect(id: "page", in: selection)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+            Button { NotchController.shared.preview() } label: {
+                Label(L("Çentiği önizle"), systemImage: "eye")
+                    .font(.system(size: 12))
+                    .frame(maxWidth: .infinity)
+            }
+            .controlSize(.large)
+            .padding(.bottom, 12)
+        }
+        .padding(.horizontal, 10)
+        .frame(width: 200)
+        .frame(maxHeight: .infinity)
+        .background(.ultraThinMaterial)
     }
 }
 
 struct ModulesSettings: View {
     @ObservedObject var prefs = Prefs.shared
 
-    private let groups: [(String, [ModuleID])] = [
-        (L("Ana sekme"), [.music, .lyrics, .calendar, .reminders, .weather, .ticker]),
-        (L("Canlı bildirimler ve ekran"), [.battery, .bluetooth, .hud, .xdr, .privacy, .network, .downloads]),
-        (L("Araçlar"), [.timer, .clipboard, .notes, .stats, .shelf, .screenshots, .launcher, .mirror]),
-        (L("Asistan"), [.assistant]),
-        (L("Gelişmiş (ek izin gerektirir)"), [.focus, .notifications, .visualizer, .lockscreen]),
+    private let groups: [(String, Color, [ModuleID])] = [
+        (L("Ana sekme"), .pink, [.music, .lyrics, .calendar, .reminders, .weather, .ticker]),
+        (L("Canlı bildirimler ve ekran"), .orange, [.battery, .bluetooth, .hud, .xdr, .privacy, .network, .downloads]),
+        (L("Araçlar"), .blue, [.timer, .clipboard, .notes, .stats, .shelf, .screenshots, .launcher, .mirror]),
+        (L("Asistan"), .purple, [.assistant]),
+        (L("Gelişmiş (ek izin gerektirir)"), .gray, [.focus, .notifications, .visualizer, .lockscreen]),
     ]
 
+    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+
     var body: some View {
-        Form {
-            ForEach(groups, id: \.0) { group in
-                Section(group.0) {
-                    ForEach(group.1) { m in
-                        Toggle(isOn: prefs.binding(m)) {
-                            Label {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(m.title)
-                                    Text(m.detail).font(.caption).foregroundStyle(.secondary)
-                                }
-                            } icon: {
-                                Image(systemName: m.icon).frame(width: 20)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                ForEach(groups, id: \.0) { group in
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(group.0).font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+                            Spacer()
+                            let on = group.2.filter { prefs.isOn($0) }.count
+                            Text("\(on)/\(group.2.count)").font(.caption.monospacedDigit()).foregroundStyle(.tertiary)
+                        }
+                        LazyVGrid(columns: columns, spacing: 10) {
+                            ForEach(group.2) { m in
+                                ModuleCard(module: m, color: group.1)
                             }
                         }
                     }
                 }
             }
+            .padding(.horizontal, 26)
+            .padding(.vertical, 14)
         }
-        .formStyle(.grouped)
         .safeAreaInset(edge: .bottom) {
             if prefs.isOn(.focus) || prefs.isOn(.notifications) {
                 FullDiskBanner()
+            }
+        }
+    }
+}
+
+struct ModuleCard: View {
+    var module: ModuleID
+    var color: Color
+    @ObservedObject var prefs = Prefs.shared
+    @State private var hover = false
+
+    var body: some View {
+        let on = prefs.isOn(module)
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: module.icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background((on ? color : Color.gray).gradient, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(module.title).font(.system(size: 12.5, weight: .semibold)).lineLimit(1)
+                Text(module.detail).font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            Toggle("", isOn: prefs.binding(module)).labelsHidden().toggleStyle(.switch).controlSize(.small)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, minHeight: 74, alignment: .topLeading)
+        .background(Color.primary.opacity(hover ? 0.09 : 0.055), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .strokeBorder(on ? color.opacity(0.45) : Color.primary.opacity(0.08), lineWidth: 1))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .onTapGesture { prefs.set(module, !on) }
+        .onHover { hover = $0 }
+        .animation(.easeInOut(duration: 0.15), value: hover)
+        .animation(.easeInOut(duration: 0.2), value: on)
+        .help(module.detail)
+    }
+}
+
+/// Tema seçimi: her temanın küçük bir önizlemesi.
+struct ThemePicker: View {
+    @ObservedObject var prefs = Prefs.shared
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(Prefs.themes, id: \.id) { theme in
+                let selected = prefs.theme == theme.id
+                Button { prefs.theme = theme.id } label: {
+                    VStack(spacing: 6) {
+                        preview(theme.id)
+                            .frame(height: 46)
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .strokeBorder(selected ? Color.accentColor : Color.primary.opacity(0.15), lineWidth: selected ? 2.5 : 1))
+                        Text(theme.name).font(.system(size: 11, weight: selected ? .semibold : .regular))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 4)
+        .animation(.easeInOut(duration: 0.15), value: prefs.theme)
+    }
+
+    @ViewBuilder private func preview(_ id: String) -> some View {
+        let c1 = prefs.themeColor1, c2 = prefs.themeColor2
+        ZStack {
+            // Arka planda bir masaüstünü andıran zemin
+            LinearGradient(colors: [Color(white: 0.55), Color(white: 0.35)], startPoint: .top, endPoint: .bottom)
+            switch id {
+            case "aurora":
+                Color.black.opacity(0.55)
+                RadialGradient(colors: [c1.opacity(0.9), .clear], center: .bottomLeading, startRadius: 0, endRadius: 60)
+                RadialGradient(colors: [c2.opacity(0.9), .clear], center: .bottomTrailing, startRadius: 0, endRadius: 60)
+            case "neon":
+                Color.black.opacity(0.85)
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(AngularGradient(colors: [c1, c2, c1], center: .center), lineWidth: 3)
+            case "gradient":
+                LinearGradient(colors: [c1, c2], startPoint: .topLeading, endPoint: .bottomTrailing).opacity(0.9)
+            case "glass":
+                Color.black.opacity(0.35)
+                LinearGradient(colors: [.white.opacity(0.3), .clear], startPoint: .top, endPoint: .bottom)
+            default:
+                Color.black
             }
         }
     }
@@ -321,10 +527,7 @@ struct AppearanceSettings: View {
     var body: some View {
         Form {
             Section {
-                Picker(L("Tema"), selection: $prefs.theme) {
-                    ForEach(Prefs.themes, id: \.id) { Text($0.name).tag($0.id) }
-                }
-                .pickerStyle(.segmented)
+                ThemePicker()
                 if prefs.theme != "black" && prefs.theme != "glass" {
                     ColorPicker(L("Tema rengi 1"), selection: Binding(get: { prefs.themeColor1 }, set: { prefs.color1 = $0.hexString }), supportsOpacity: false)
                     ColorPicker(L("Tema rengi 2"), selection: Binding(get: { prefs.themeColor2 }, set: { prefs.color2 = $0.hexString }), supportsOpacity: false)
@@ -398,11 +601,6 @@ struct AppearanceSettings: View {
                 Toggle(L("Bir saat içindeki toplantıyı geri sayımla göster"), isOn: $prefs.showMeeting)
             }
 
-            Section {
-                Button(L("Çentiği aç ve önizle")) { NotchController.shared.preview() }
-            } footer: {
-                Text(L("Önizleme 6 saniye açık kalır; ayarları değiştirdikçe anında güncellenir."))
-            }
         }
         .formStyle(.grouped)
     }

@@ -17,6 +17,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Prefs.shared.$selectionHotkey.dropFirst().sink { HotKey.shared.setSelectionEnabled($0) }.store(in: &bag)
 
         installMainMenu()
+        Updater.shared.start()
+        // Geliştirme testi: açılışta güncellemeyi denetleyip kurar.
+        if ProcessInfo.processInfo.environment["ADA_TEST_UPDATE"] != nil {
+            Prefs.shared.autoInstallUpdates = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { Updater.shared.check() }
+        }
+        if ProcessInfo.processInfo.environment["ADA_TEST_SETTINGS"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.openSettings() }
+        }
         if ProcessInfo.processInfo.environment["ADA_TEST_CONFETTI"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { NotchModel.shared.celebration += 1 }
         }
@@ -94,10 +103,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func openSettings() {
         if settingsWindow == nil {
             let w = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 620, height: 560),
+                contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
                 styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
                 backing: .buffered, defer: false)
             w.title = L("Ada Ayarları")
+            w.titlebarAppearsTransparent = true
+            w.titleVisibility = .hidden
+            w.isMovableByWindowBackground = true
             w.isReleasedWhenClosed = false
             w.contentView = NSHostingView(rootView: SettingsView())
             w.center()

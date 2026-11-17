@@ -198,6 +198,8 @@ final class Prefs: ObservableObject {
     @Published var contrast: Double { didSet { d.set(contrast, forKey: "contrast"); tuningChanged() } }
     @Published var dim: Double { didSet { d.set(dim, forKey: "dim"); tuningChanged() } }
     @Published var tickerSymbols: String { didSet { d.set(tickerSymbols, forKey: "tickerSymbols"); DispatchQueue.main.async { TickerService.shared.fetch() } } }
+    @Published var autoCheckUpdates: Bool { didSet { d.set(autoCheckUpdates, forKey: "autoCheckUpdates") } }
+    @Published var autoInstallUpdates: Bool { didSet { d.set(autoInstallUpdates, forKey: "autoInstallUpdates") } }
     @Published var memory: [String] { didSet { d.set(memory, forKey: "memory") } }
 
     private init() {
@@ -230,6 +232,8 @@ final class Prefs: ObservableObject {
         effort = d.object(forKey: "effort") as? String ?? "low"
         customInstructions = d.object(forKey: "customInstructions") as? String ?? ""
         memory = d.stringArray(forKey: "memory") ?? []
+        autoCheckUpdates = d.object(forKey: "autoCheckUpdates") as? Bool ?? true
+        autoInstallUpdates = d.object(forKey: "autoInstallUpdates") as? Bool ?? false
         tickerSymbols = d.string(forKey: "tickerSymbols") ?? "BTCUSDT, ETHUSDT"
         theme = d.string(forKey: "theme") ?? "aurora"
         color1 = d.string(forKey: "color1") ?? "#7B5CFF"

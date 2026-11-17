@@ -77,6 +77,22 @@ Hazır derlenmiş, Apple tarafından onaylanmış (notarized) bir sürüm henüz
 İlk açılışta ayarlar penceresi açılır. Sonrasında menü çubuğundaki ✦ simgesinden ya da açık çentiğin
 sağ üstündeki dişliden ulaşabilirsiniz.
 
+## Güncelleme
+
+Ada yeni sürümleri kendisi denetler (açılışta ve altı saatte bir). Güncelleme olduğunda çentikte bildirir;
+Ayarlar › Güncellemeler'deki "Şimdi güncelle" düğmesi depodaki yeni sürümü indirir, Mac'inizde yeniden derler ve
+Ada'yı yeniden başlatır. Derleme başarısız olursa çalışan sürüm değişmez. İsterseniz otomatik kurulumu da
+açabilirsiniz; bu durumda Ada depodan gelen kodu size sormadan derleyip çalıştırır.
+
+Güncelleyici, uygulamayı derlediğiniz klasördeki git deposunu kullanır; bu yüzden o klasörü silmeyin. Elle
+güncellemek için:
+
+```bash
+git pull && ./build.sh run
+```
+
+Güncelleyiciden önceki bir sürümü kurduysanız bu komutu bir kez elle çalıştırmanız gerekir.
+
 ## İzinler
 
 Ada yalnızca açtığınız modüllerin ihtiyaç duyduğu izinleri ister:
@@ -171,7 +187,8 @@ cd ada-notch
 ./build.sh run
 ```
 
-There is no notarized download yet; build from source. Ada follows your system language (English or Turkish);
+There is no notarized download yet; build from source. Ada checks for new versions itself and updates from
+Settings › Updates (it pulls the repository, rebuilds on your Mac and restarts). Keep the folder you built from. Ada follows your system language (English or Turkish);
 change it in Settings › General › Language.
 
 **Privacy:** no servers, accounts or telemetry of its own. Data leaves your Mac only for the features you use:

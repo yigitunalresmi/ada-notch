@@ -424,6 +424,11 @@ struct TopBar: View {
                 }
                 Button { AppDelegate.showSettings() } label: {
                     Image(systemName: "gearshape.fill").foregroundStyle(.white.opacity(0.6))
+                        .overlay(alignment: .topTrailing) {
+                            if Updater.shared.updateAvailable {
+                                Circle().fill(.blue).frame(width: 6, height: 6).offset(x: 3, y: -2)
+                            }
+                        }
                 }
                 .buttonStyle(HoverIconStyle())
                 .help(L("Ayarlar"))
