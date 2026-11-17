@@ -299,6 +299,7 @@ struct AgendaColumn: View {
         let tall = prefs.expandedHeight >= 290
         VStack(alignment: .leading, spacing: tall ? 10 : 7) {
             if prefs.isOn(.weather) { weatherRow }
+            if prefs.isOn(.ticker) { TickerRow() }
             if prefs.isOn(.calendar) {
                 VStack(alignment: .leading, spacing: 5) {
                     SectionTitle(text: L("Yaklaşan"))

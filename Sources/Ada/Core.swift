@@ -51,6 +51,10 @@ enum AppLanguage {
 enum ModuleID: String, CaseIterable, Identifiable {
     case music, lyrics, calendar, reminders, weather, battery, bluetooth, hud, xdr, stats
     case shelf, clipboard, timer, notes, mirror, launcher, assistant
+    case privacy, downloads, network, ticker
+
+    /// İzin penceresi açtığı ya da dışarıya istek gönderdiği için kapalı gelen modüller.
+    static let defaultOff: Set<ModuleID> = [.downloads, .ticker]
 
     var id: String { rawValue }
 
@@ -72,6 +76,10 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .notes: return L("Hızlı not")
         case .mirror: return L("Ayna")
         case .launcher: return L("Uygulama başlatıcı")
+        case .privacy: return L("Kamera ve mikrofon göstergesi")
+        case .downloads: return L("İndirme takibi")
+        case .network: return L("Ağ bildirimleri")
+        case .ticker: return L("Piyasa takibi")
         case .assistant: return L("Asistan")
         }
     }
@@ -94,6 +102,10 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .notes: return "note.text"
         case .mirror: return "person.crop.square"
         case .launcher: return "square.grid.3x3"
+        case .privacy: return "video.badge.checkmark"
+        case .downloads: return "arrow.down.circle"
+        case .network: return "wifi"
+        case .ticker: return "chart.line.uptrend.xyaxis"
         case .assistant: return "sparkles"
         }
     }
@@ -116,6 +128,10 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .notes: return L("Çentikte küçük bir not defteri.")
         case .mirror: return L("Kamerayı ayna olarak kullanır.")
         case .launcher: return L("Sık kullandığınız uygulamaları çentikten açın.")
+        case .privacy: return L("Bir uygulama kamerayı ya da mikrofonu kullanırken çentikte nokta gösterir.")
+        case .downloads: return L("İndirilenler klasöründeki süren indirmeleri çentikte gösterir. Klasöre erişim izni ister.")
+        case .network: return L("İnternet bağlantısı kesildiğinde, geri geldiğinde ya da ağ değiştiğinde bildirir.")
+        case .ticker: return L("Seçtiğiniz kripto fiyatlarını Ana sekmede gösterir (Binance'in açık verisinden).")
         case .assistant: return L("Claude ile sohbet; takvim, müzik ve Mac ayarlarını sizin için yönetir.")
         }
     }
@@ -163,6 +179,7 @@ final class Prefs: ObservableObject {
     @Published var warmth: Double { didSet { d.set(warmth, forKey: "warmth"); tuningChanged() } }
     @Published var contrast: Double { didSet { d.set(contrast, forKey: "contrast"); tuningChanged() } }
     @Published var dim: Double { didSet { d.set(dim, forKey: "dim"); tuningChanged() } }
+    @Published var tickerSymbols: String { didSet { d.set(tickerSymbols, forKey: "tickerSymbols"); DispatchQueue.main.async { TickerService.shared.fetch() } } }
     @Published var memory: [String] { didSet { d.set(memory, forKey: "memory") } }
 
     private init() {
@@ -193,6 +210,7 @@ final class Prefs: ObservableObject {
         effort = d.object(forKey: "effort") as? String ?? "low"
         customInstructions = d.object(forKey: "customInstructions") as? String ?? ""
         memory = d.stringArray(forKey: "memory") ?? []
+        tickerSymbols = d.string(forKey: "tickerSymbols") ?? "BTCUSDT, ETHUSDT"
         theme = d.string(forKey: "theme") ?? "aurora"
         color1 = d.string(forKey: "color1") ?? "#7B5CFF"
         color2 = d.string(forKey: "color2") ?? "#00D4FF"
@@ -228,7 +246,7 @@ final class Prefs: ObservableObject {
     /// Sıcaklığı seçili birimde tam sayı olarak verir.
     func temp(_ celsius: Double) -> Int { Int((fahrenheit ? celsius * 9 / 5 + 32 : celsius).rounded()) }
 
-    func isOn(_ m: ModuleID) -> Bool { modules[m.rawValue] ?? true }
+    func isOn(_ m: ModuleID) -> Bool { modules[m.rawValue] ?? !ModuleID.defaultOff.contains(m) }
     func set(_ m: ModuleID, _ on: Bool) { modules[m.rawValue] = on }
     func binding(_ m: ModuleID) -> Binding<Bool> {
         Binding(get: { self.isOn(m) }, set: { self.set(m, $0) })
@@ -297,6 +315,8 @@ final class NotchModel: ObservableObject {
     var compactMeeting: Bool {
         Prefs.shared.isOn(.calendar) && Prefs.shared.showMeeting && AgendaService.shared.next != nil
     }
+    var compactDownload: Bool { Prefs.shared.isOn(.downloads) && DownloadsService.shared.current != nil }
+    var compactPrivacy: Bool { Prefs.shared.isOn(.privacy) && PrivacyService.shared.anyOn }
     var compactTimer: Bool { Prefs.shared.isOn(.timer) && CountdownService.shared.running }
     var compactMusic: Bool { Prefs.shared.isOn(.music) && Prefs.shared.showMusicWings && MusicService.shared.isPlaying }
 
@@ -304,9 +324,12 @@ final class NotchModel: ObservableObject {
         if expanded { return expandedSize }
         if hud != nil { return CGSize(width: notchSize.width + 2 * 118, height: notchSize.height) }
         var wing: CGFloat = 0
+        if compactPrivacy { wing = 30 }
         if compactMusic { wing = 46 }
+        if compactDownload { wing = 76 }
         if compactMeeting { wing = 72 }
         if compactTimer { wing = 68 }
+        if compactPrivacy, wing > 30 { wing += 12 }
         return CGSize(width: notchSize.width + 2 * wing, height: notchSize.height)
     }
 
@@ -442,6 +465,11 @@ final class ModuleManager {
         if !p.isOn(.xdr) { BoostService.shared.set(1) }
         StatsService.shared.setEnabled(p.isOn(.stats))
         ClipboardService.shared.setEnabled(p.isOn(.clipboard))
+        PrivacyService.shared.setEnabled(p.isOn(.privacy))
+        DownloadsService.shared.setEnabled(p.isOn(.downloads))
+        NetworkService.shared.setEnabled(p.isOn(.network))
+        TickerService.shared.setEnabled(p.isOn(.ticker))
+        CapsLockMonitor.shared.setEnabled(p.isOn(.hud))
         let model = NotchModel.shared
         if !model.availableTabs.contains(model.tab) { model.tab = .home }
     }

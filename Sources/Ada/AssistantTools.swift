@@ -94,6 +94,8 @@ enum ToolBox {
                  ["warmth": num("0 to 100; 0 is neutral"), "contrast": num("-30 to 40; 0 is neutral"), "dim": num("0 to 70; extra dimming percent")]),
             tool("set_theme", "Change Ada's notch theme.",
                  ["theme": choice("Theme", ["aurora", "neon", "gradient", "glass", "black"])], required: ["theme"]),
+            tool("market_prices", "Current price and 24h change for crypto pairs from Binance's public data.",
+                 ["symbols": str("Comma-separated Binance symbols such as BTCUSDT, ETHUSDT. Defaults to the user's watchlist.")]),
             tool("audio_output", "List the Mac's audio output devices or switch the output to one of them (speakers, AirPods, a display…).",
                  ["action": choice("What to do", ["list", "set"]), "name": str("Device name, or part of it, when setting")],
                  required: ["action"]),
@@ -152,6 +154,7 @@ enum ToolBox {
         case "add_to_shelf": return L("Rafa ekleniyor")
         case "keep_awake": return L("Uyku ayarı")
         case "audio_output": return L("Ses çıkışı")
+        case "market_prices": return L("Fiyatlara bakılıyor")
         case "display_tuning": return L("Ekran ayarlanıyor")
         case "set_theme": return L("Tema değiştiriliyor")
         case "pomodoro": return "Pomodoro"
@@ -471,6 +474,18 @@ enum ToolBox {
             guard let t = input["theme"] as? String, Prefs.themes.contains(where: { $0.id == t }) else { return .fail("Unknown theme.") }
             Prefs.shared.theme = t
             return .ok("Theme set to \(t).")
+
+        case "market_prices":
+            let raw = (input["symbols"] as? String) ?? Prefs.shared.tickerSymbols
+            let symbols = raw.uppercased().components(separatedBy: CharacterSet(charactersIn: ", ;")).filter { !$0.isEmpty && $0.allSatisfy { $0.isLetter || $0.isNumber } }
+            guard !symbols.isEmpty else { return .fail("No symbols given.") }
+            var comps = URLComponents(string: "https://api.binance.com/api/v3/ticker/24hr")!
+            comps.queryItems = [URLQueryItem(name: "symbols", value: "[" + symbols.map { "\"\($0)\"" }.joined(separator: ",") + "]")]
+            guard let url = comps.url, let (data, _) = try? await URLSession.shared.data(from: url),
+                  let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                return .fail("Could not fetch prices (unknown symbol or no connection).")
+            }
+            return .ok(arr.map { "\($0["symbol"] ?? "?"): \($0["lastPrice"] ?? "?") (24h \($0["priceChangePercent"] ?? "?")%)" }.joined(separator: "\n"))
 
         case "audio_output":
             let devices = Audio.outputDevices()

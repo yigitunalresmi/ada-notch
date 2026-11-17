@@ -18,8 +18,8 @@ struct ModulesSettings: View {
     @ObservedObject var prefs = Prefs.shared
 
     private let groups: [(String, [ModuleID])] = [
-        (L("Ana sekme"), [.music, .lyrics, .calendar, .reminders, .weather]),
-        (L("Canlı bildirimler ve ekran"), [.battery, .bluetooth, .hud, .xdr]),
+        (L("Ana sekme"), [.music, .lyrics, .calendar, .reminders, .weather, .ticker]),
+        (L("Canlı bildirimler ve ekran"), [.battery, .bluetooth, .hud, .xdr, .privacy, .network, .downloads]),
         (L("Araçlar"), [.timer, .clipboard, .notes, .stats, .shelf, .launcher, .mirror]),
         (L("Asistan"), [.assistant]),
     ]
@@ -205,6 +205,11 @@ struct GeneralSettings: View {
                     Text(Lf("%@ öğe", "\(Int(prefs.clipboardLimit))")).monospacedDigit().frame(width: 64, alignment: .trailing)
                 }
                 Toggle(L("Zamanlayıcı bitince ses çal"), isOn: $prefs.timerSound)
+                HStack {
+                    Text(L("Piyasa sembolleri"))
+                    TextField("BTCUSDT, ETHUSDT", text: $prefs.tickerSymbols)
+                        .textFieldStyle(.roundedBorder)
+                }
                 Stepper(Lf("Pomodoro odak süresi: %@ dk", "\(Int(prefs.pomodoroWork))"), value: $prefs.pomodoroWork, in: 5...90, step: 5)
                 Stepper(Lf("Pomodoro mola süresi: %@ dk", "\(Int(prefs.pomodoroBreak))"), value: $prefs.pomodoroBreak, in: 1...30, step: 1)
                 HStack {

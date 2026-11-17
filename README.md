@@ -11,12 +11,16 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 - Spotify ve Apple Music: kapak, ilerleme çubuğu, oynatma kontrolleri, karışık çalma, zamanlı şarkı sözleri
 - Takvim ve anımsatıcılar; görüntülü toplantılar için "Katıl" düğmesi
 - Konuma göre hava durumu
+- Piyasa takibi: seçtiğiniz kripto fiyatları (isteğe bağlı)
 
 **Kapalı çentikte canlı göstergeler**
 - Çalan parça, zamanlayıcının kalan süresi, bir saat içindeki toplantıya geri sayım
 - Ses ve parlaklık tuşlarında macOS göstergesi yerine çentik göstergesi
 - XDR ekranlarda %100'ün üstünde ekstra (HDR) parlaklık
-- Şarja takma/çıkarma ve Bluetooth cihazı bağlanma bildirimleri
+- Şarja takma/çıkarma (adaptör gücüyle) ve Bluetooth cihazı bağlanma bildirimleri; kulaklık pil düzeyi
+- Bir uygulama kamerayı ya da mikrofonu kullanırken nokta göstergesi
+- İnternet kesildi / geri geldi / ağ değişti bildirimleri, Caps Lock göstergesi
+- İndirilenler klasöründeki süren indirmeler (isteğe bağlı)
 
 **Araçlar**
 - Zamanlayıcı ve Pomodoro, pano geçmişi, hızlı not, işlemci/bellek/ağ
@@ -78,6 +82,7 @@ Ada yalnızca açtığınız modüllerin ihtiyaç duyduğu izinleri ister:
 | Bluetooth | Bağlanma bildirimleri |
 | Kamera | Ayna |
 | Mikrofon, Konuşma Tanıma | Sesli komut ve sesli sohbet |
+| İndirilenler klasörü | İndirme takibi (varsayılan kapalı) |
 | Ekran Kaydı | Ekran alıntısı ve (açarsanız) asistanın ekrana bakması |
 
 ## Gizlilik
@@ -89,6 +94,7 @@ Ada'nın kendi sunucusu, hesabı ya da telemetrisi yoktur. Dışarıya yalnızca
 - **api.open-meteo.com** — hava durumu için yaklaşık (1 km'ye yuvarlanmış) konumunuz.
 - **lrclib.net** — şarkı sözleri için çalan parçanın ve sanatçının adı.
 - **Spotify CDN** — çalan parçanın kapak görseli.
+- **api.binance.com** — yalnızca Piyasa takibi açıksa, seçtiğiniz sembollerin fiyatı (kişisel veri gönderilmez).
 
 Hava durumu, şarkı sözleri ve asistan Ayarlar › Modüller'den kapatılabilir.
 
@@ -129,7 +135,8 @@ weather, tools and an assistant that can operate your Mac for you.
 
 - **Home:** Spotify / Apple Music controls with synced lyrics, calendar, reminders, weather
 - **Closed notch:** now playing, timer, meeting countdown, volume/brightness indicator, extra HDR brightness on XDR
-  displays, charging and Bluetooth alerts
+  displays, charging and Bluetooth alerts (with headphone battery), camera/microphone-in-use dots, network and
+  Caps Lock alerts, downloads in progress
 - **Tools:** timer and Pomodoro, clipboard history, quick note, system stats, quick actions (appearance, keep
   awake, capture, mute, color picker, sleep display, audio output), file shelf with AirDrop, app launcher, mirror
 - **Assistant (Claude):** text, push-to-talk and hands-free voice chat; manages calendar, reminders, music, volume,

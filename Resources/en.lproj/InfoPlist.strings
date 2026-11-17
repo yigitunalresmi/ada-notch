@@ -7,3 +7,4 @@
 "NSMicrophoneUsageDescription" = "Ada uses the microphone so you can talk to the assistant.";
 "NSSpeechRecognitionUsageDescription" = "Ada uses speech recognition to turn what you say into text.";
 "NSBluetoothAlwaysUsageDescription" = "Ada uses Bluetooth to show connecting devices in the notch.";
+"NSDownloadsFolderUsageDescription" = "Ada watches your Downloads folder to show downloads in progress in the notch.";

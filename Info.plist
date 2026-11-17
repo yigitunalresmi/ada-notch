@@ -22,6 +22,7 @@
   <key>NSCameraUsageDescription</key><string>Ada uses the camera for the Mirror module.</string>
   <key>NSMicrophoneUsageDescription</key><string>Ada uses the microphone so you can talk to the assistant.</string>
   <key>NSSpeechRecognitionUsageDescription</key><string>Ada uses speech recognition to turn what you say into text.</string>
+  <key>NSDownloadsFolderUsageDescription</key><string>Ada watches your Downloads folder to show downloads in progress in the notch.</string>
   <key>NSBluetoothAlwaysUsageDescription</key><string>Ada uses Bluetooth to show connecting devices in the notch.</string>
 </dict>
 </plist>

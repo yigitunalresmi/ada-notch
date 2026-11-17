@@ -32,6 +32,8 @@ struct NotchRootView: View {
     @ObservedObject var music = MusicService.shared
     @ObservedObject var countdown = CountdownService.shared
     @ObservedObject var agenda = AgendaService.shared
+    @ObservedObject var privacy = PrivacyService.shared
+    @ObservedObject var downloads = DownloadsService.shared
 
     var body: some View {
         let size = model.currentSize()
@@ -202,6 +204,7 @@ struct CollapsedView: View {
     @ObservedObject var music = MusicService.shared
     @ObservedObject var countdown = CountdownService.shared
     @ObservedObject var agenda = AgendaService.shared
+    @ObservedObject var downloads = DownloadsService.shared
 
     var body: some View {
         HStack(spacing: 0) {
@@ -232,12 +235,25 @@ struct CollapsedView: View {
                 Text(e.title).lineLimit(1).truncationMode(.tail)
             }
             .font(.system(size: 11, weight: .semibold))
+        } else if model.compactDownload, let d = downloads.current {
+            HStack(spacing: 5) {
+                Image(systemName: "arrow.down.circle.fill").foregroundStyle(.blue)
+                Text(d.name).lineLimit(1).truncationMode(.middle)
+            }
+            .font(.system(size: 11, weight: .semibold))
         } else if model.compactMusic {
             ArtworkView(image: music.artwork, size: 20, radius: 5)
         }
     }
 
-    @ViewBuilder var right: some View {
+    var right: some View {
+        HStack(spacing: 6) {
+            rightMain
+            if model.hud == nil, model.compactPrivacy { PrivacyDots() }
+        }
+    }
+
+    @ViewBuilder var rightMain: some View {
         if let hud = model.hud {
             if let v = hud.value {
                 HStack(spacing: 6) {
@@ -263,6 +279,8 @@ struct CollapsedView: View {
             TimelineView(.periodic(from: .now, by: 20)) { _ in
                 Text(e.countdown).font(.system(size: 12, weight: .semibold).monospacedDigit())
             }
+        } else if model.compactDownload, let d = downloads.current {
+            Text(DownloadsService.size(d.bytes)).font(.system(size: 11, weight: .semibold).monospacedDigit())
         } else if model.compactMusic {
             EqualizerBars().frame(width: 18, height: 14)
         }
@@ -373,7 +391,7 @@ struct HomeView: View {
             if prefs.isOn(.music) {
                 MusicCard().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            if prefs.isOn(.calendar) || prefs.isOn(.reminders) || prefs.isOn(.weather) {
+            if prefs.isOn(.calendar) || prefs.isOn(.reminders) || prefs.isOn(.weather) || prefs.isOn(.ticker) {
                 AgendaColumn().frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             if !prefs.isOn(.music) && !prefs.isOn(.calendar) && !prefs.isOn(.reminders) && !prefs.isOn(.weather) {

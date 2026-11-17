@@ -50,7 +50,7 @@ struct AssistantView: View {
                             Text(L("Şunları deneyebilirsiniz:")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 6) {
-                                    ForEach([L("Bugün takvimimde ne var?"), L("Bu pencereyi sola yasla"), L("Seçili metni özetle"), L("25 dakikalık zamanlayıcı kur"), L("Sesi yüzde 30 yap ve karanlık moda geç"), L("Yarın 10'a toplantı ekle")], id: \.self) { s in
+                                    ForEach([L("Günün özetini ver"), L("Bugün takvimimde ne var?"), L("Bu pencereyi sola yasla"), L("Seçili metni özetle"), L("25 dakikalık zamanlayıcı kur"), L("Sesi yüzde 30 yap ve karanlık moda geç"), L("Yarın 10'a toplantı ekle")], id: \.self) { s in
                                         Button(s) { engine.send(s) }.buttonStyle(PillButtonStyle()).fixedSize()
                                     }
                                 }

@@ -48,6 +48,13 @@ final class BatteryService: ObservableObject {
         }
     }
 
+    /// Takılı güç adaptörünün gücü, ör. " · 96W".
+    private static func adapterWatts() -> String {
+        guard let d = IOPSCopyExternalPowerAdapterDetails()?.takeRetainedValue() as? [String: Any],
+              let w = d["Watts"] as? Int, w > 0 else { return "" }
+        return " · \(w)W"
+    }
+
     func refresh() {
         guard enabled else { return }
         let snap = IOPSCopyPowerSourcesInfo().takeRetainedValue()
@@ -64,7 +71,7 @@ final class BatteryService: ObservableObject {
             if primed, ac != wasAC {
                 NotchModel.shared.showHUD(HUDInfo(
                     icon: ac ? "bolt.fill" : "battery.75",
-                    title: ac ? Lf("Şarj oluyor · %%%@", "\(cap)") : Lf("Pilde · %%%@", "\(cap)"),
+                    title: ac ? Lf("Şarj oluyor · %%%@", "\(cap)") + Self.adapterWatts() : Lf("Pilde · %%%@", "\(cap)"),
                     tint: ac ? .green : .white), seconds: 2.6)
             }
             if primed, !ac, cap == 20 || cap == 10 {
@@ -100,6 +107,13 @@ final class BluetoothService: NSObject {
         let name = device.name ?? L("Bluetooth cihazı")
         DispatchQueue.main.async {
             NotchModel.shared.showHUD(HUDInfo(icon: Self.icon(for: name), title: Lf("%@ bağlandı", "\(name)"), tint: .blue), seconds: 2.8)
+        }
+        // Pil düzeyi birkaç saniye sonra hazır olur; ayrı bir bildirimle göster.
+        DispatchQueue.global().asyncAfter(deadline: .now() + 3.2) {
+            guard let levels = BluetoothBattery.levels(for: name) else { return }
+            DispatchQueue.main.async {
+                NotchModel.shared.showHUD(HUDInfo(icon: Self.icon(for: name), title: levels, tint: .green), seconds: 3.2)
+            }
         }
     }
 

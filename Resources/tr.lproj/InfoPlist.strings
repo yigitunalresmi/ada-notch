@@ -7,3 +7,4 @@
 "NSMicrophoneUsageDescription" = "Ada, asistanla sesli konuşabilmeniz için mikrofonu kullanır.";
 "NSSpeechRecognitionUsageDescription" = "Ada, söylediklerinizi yazıya çevirmek için konuşma tanımayı kullanır.";
 "NSBluetoothAlwaysUsageDescription" = "Ada, bağlanan Bluetooth cihazlarını çentikte göstermek için Bluetooth'u kullanır.";
+"NSDownloadsFolderUsageDescription" = "Ada, süren indirmeleri çentikte göstermek için İndirilenler klasörünüzü izler.";
