@@ -43,6 +43,109 @@ final class Updater: ObservableObject {
         }
     }
 
+    /// Hazır (derlenmiş) sürüm olarak mı kuruldu? Öyleyse güncellemeler GitHub Releases'ten gelir.
+    var isReleaseInstall: Bool { sourcePath == nil }
+
+    private static let repo = "yigitunalresmi/ada-notch"
+    private var releaseAsset: URL?
+
+    private var localBuild: Int { Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "") ?? 0 }
+
+    /// Disk görüntüsünden ya da macOS'in geçici karantina konumundan çalışıyorsa kendini güncelleyemez.
+    private var relocationProblem: String? {
+        let path = Bundle.main.bundlePath
+        if path.contains("/AppTranslocation/") || path.hasPrefix("/Volumes/") {
+            return L("Güncelleyebilmek için Ada'yı Uygulamalar klasörüne sürükleyip oradan açın.")
+        }
+        let parent = (path as NSString).deletingLastPathComponent
+        if !FileManager.default.isWritableFile(atPath: parent) {
+            return L("Ada'nın bulunduğu klasöre yazma izni yok; güncelleme kurulamaz.")
+        }
+        return nil
+    }
+
+    private func checkRelease(silent: Bool) {
+        if let problem = relocationProblem {
+            state = .unavailable(problem)
+            return
+        }
+        state = .checking
+        var req = URLRequest(url: URL(string: "https://api.github.com/repos/\(Self.repo)/releases/latest")!)
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        req.setValue("Ada-Notch", forHTTPHeaderField: "User-Agent")
+        req.timeoutInterval = 30
+        URLSession.shared.dataTask(with: req) { data, resp, _ in
+            let status = (resp as? HTTPURLResponse)?.statusCode ?? 0
+            let json = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+            DispatchQueue.main.async {
+                self.lastChecked = Date()
+                guard status == 200, let json, let tag = json["tag_name"] as? String,
+                      let remote = Int(tag.components(separatedBy: ".").last ?? "") else {
+                    self.state = status == 404 ? .upToDate : .failed(L("Güncelleme denetlenemedi (ağ ya da git hatası)."))
+                    return
+                }
+                let assets = json["assets"] as? [[String: Any]] ?? []
+                let zip = assets.first { $0["name"] as? String == "Ada.zip" }?["browser_download_url"] as? String
+                guard remote > self.localBuild, let zip, let url = URL(string: zip), url.host == "github.com" else {
+                    self.state = .upToDate
+                    return
+                }
+                self.releaseAsset = url
+                let notes = (json["body"] as? String ?? "").components(separatedBy: "\n")
+                    .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "-* \r")) }.filter { !$0.isEmpty }
+                self.state = .available(count: remote - self.localBuild, notes: Array(notes.prefix(6)))
+                if Prefs.shared.autoInstallUpdates {
+                    self.install()
+                } else if !self.announced {
+                    self.announced = true
+                    NotchModel.shared.showHUD(HUDInfo(icon: "arrow.down.circle.fill", title: L("Ada güncellemesi var"), tint: .blue), seconds: 3.5)
+                }
+            }
+        }.resume()
+    }
+
+    private static func teamID(of appPath: String) -> String? {
+        let out = Shell.run("/usr/bin/codesign", ["-dv", appPath]).out
+        guard let line = out.components(separatedBy: "\n").first(where: { $0.hasPrefix("TeamIdentifier=") }) else { return nil }
+        let id = String(line.dropFirst("TeamIdentifier=".count))
+        return id == "not set" ? nil : id
+    }
+
+    /// Yeni sürümü indirir, doğrular, eskisinin yerine koyar ve Ada'yı yeniden başlatır.
+    private func installRelease() {
+        guard let url = releaseAsset else { return }
+        state = .updating
+        let current = Bundle.main.bundlePath
+        queue.async {
+            func fail(_ message: String) { DispatchQueue.main.async { self.state = .failed(message) } }
+            let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("ada-update-\(UUID().uuidString)")
+            try? FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+            let zip = tmp.appendingPathComponent("Ada.zip")
+            guard let data = try? Data(contentsOf: url), (try? data.write(to: zip)) != nil else {
+                return fail(L("Güncelleme indirilemedi."))
+            }
+            guard Shell.run("/usr/bin/ditto", ["-x", "-k", zip.path, tmp.path], timeout: 60).code == 0 else {
+                return fail(L("Güncelleme paketi açılamadı."))
+            }
+            let fresh = tmp.appendingPathComponent("Ada.app").path
+            // İndirilen paket gerçekten Ada mı ve imzası sağlam mı?
+            guard Bundle(path: fresh)?.bundleIdentifier == Bundle.main.bundleIdentifier,
+                  Shell.run("/usr/bin/codesign", ["--verify", "--strict", fresh]).code == 0 else {
+                return fail(L("Güncelleme paketi doğrulanamadı."))
+            }
+            // Çalışan sürüm bir geliştirici kimliğiyle imzalıysa yenisi de aynı kimlikle imzalı olmalı.
+            if let team = Self.teamID(of: current), Self.teamID(of: fresh) != team {
+                return fail(L("Güncelleme paketi doğrulanamadı."))
+            }
+            let script = "sleep 0.6; rm -rf \"$0.old\"; mv \"$0\" \"$0.old\" && mv \"$1\" \"$0\" && rm -rf \"$0.old\"; /usr/bin/open \"$0\""
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/sh")
+            p.arguments = ["-c", script, current, fresh]
+            do { try p.run() } catch { return fail(L("Güncelleme başlatılamadı.")) }
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
+    }
+
     var updateAvailable: Bool {
         if case .available = state { return true }
         return false
@@ -67,7 +170,7 @@ final class Updater: ObservableObject {
     func check(silent: Bool = false) {
         if state == .checking || state == .updating { return }
         guard let src = sourcePath else {
-            state = .unavailable(L("Bu kopya kaynak klasöründen çalışmıyor. Güncellemek için depoyu yeniden indirip derleyin."))
+            checkRelease(silent: silent)
             return
         }
         state = .checking
@@ -106,7 +209,11 @@ final class Updater: ObservableObject {
 
     /// Yeni sürümü indirir, derler ve Ada'yı yeniden başlatır. Derleme başarısız olursa çalışan sürüm aynen kalır.
     func install() {
-        guard state != .updating, let src = sourcePath else { return }
+        guard state != .updating else { return }
+        guard let src = sourcePath else {
+            installRelease()
+            return
+        }
         state = .updating
         let log = NSHomeDirectory() + "/Library/Logs/Ada-update.log"
         FileManager.default.createFile(atPath: log, contents: nil)
@@ -180,7 +287,9 @@ struct UpdatesSettings: View {
             } header: {
                 Text(L("Güncellemeler"))
             } footer: {
-                Text(L("Ada kaynak koddan kurulduğu için güncelleme, depodaki yeni sürümü indirip Mac'inizde yeniden derler ve Ada'yı yeniden başlatır. Derleme başarısız olursa çalışan sürüm değişmez."))
+                Text(updater.isReleaseInstall
+                     ? L("Güncelleme, GitHub'daki yeni sürümü indirir, imzasını doğrular, eskisinin yerine koyar ve Ada'yı yeniden başlatır.")
+                     : L("Ada kaynak koddan kurulduğu için güncelleme, depodaki yeni sürümü indirip Mac'inizde yeniden derler ve Ada'yı yeniden başlatır. Derleme başarısız olursa çalışan sürüm değişmez."))
             }
 
             Section {
@@ -188,7 +297,9 @@ struct UpdatesSettings: View {
                 Toggle(L("Yeni sürümleri otomatik kur"), isOn: $prefs.autoInstallUpdates)
                     .disabled(!prefs.autoCheckUpdates)
             } footer: {
-                Text(L("Otomatik kurulum açıkken Ada, depodan gelen kodu size sormadan derleyip çalıştırır."))
+                Text(updater.isReleaseInstall
+                     ? L("Otomatik kurulum açıkken Ada yeni sürümleri size sormadan indirip kurar.")
+                     : L("Otomatik kurulum açıkken Ada, depodan gelen kodu size sormadan derleyip çalıştırır."))
             }
 
             Section {

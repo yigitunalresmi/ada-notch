@@ -389,3 +389,10 @@
 "Bir sorun oluştu" = "Something went wrong";
 "Güncelleyici kullanılamıyor" = "Updater unavailable";
 "Son denetim: %@" = "Last checked: %@";
+"Güncelleyebilmek için Ada'yı Uygulamalar klasörüne sürükleyip oradan açın." = "To update, drag Ada to the Applications folder and open it from there.";
+"Ada'nın bulunduğu klasöre yazma izni yok; güncelleme kurulamaz." = "No write permission for Ada's folder; the update cannot be installed.";
+"Güncelleme indirilemedi." = "The update could not be downloaded.";
+"Güncelleme paketi açılamadı." = "The update package could not be unpacked.";
+"Güncelleme paketi doğrulanamadı." = "The update package could not be verified.";
+"Güncelleme, GitHub'daki yeni sürümü indirir, imzasını doğrular, eskisinin yerine koyar ve Ada'yı yeniden başlatır." = "Updating downloads the new version from GitHub, verifies its signature, replaces the old one and restarts Ada.";
+"Otomatik kurulum açıkken Ada yeni sürümleri size sormadan indirip kurar." = "With automatic installation on, Ada downloads and installs new versions without asking you.";

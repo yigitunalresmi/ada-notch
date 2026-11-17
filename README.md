@@ -55,12 +55,33 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 ## Gereksinimler
 
 - macOS 14 veya üzeri (Liquid Glass görünümü macOS 26 ve üzerinde; eski sürümlerde bulanık cam kullanılır)
-- Derlemek için Xcode ya da Xcode Komut Satırı Araçları (`xcode-select --install`)
+- Apple Silicon ya da Intel Mac
+- Yalnızca kaynaktan derlemek için: Xcode ya da Xcode Komut Satırı Araçları (`xcode-select --install`)
 - Asistan için bir [Anthropic API anahtarı](https://console.anthropic.com/) (asistan dışındaki her şey anahtarsız çalışır)
 
 Çentiksiz Mac'lerde ve harici ekranlarda ekranın üst ortasında küçük bir hap olarak görünür.
 
 ## Kurulum
+
+### 1. Sürükle-bırak (en kolay)
+
+1. [Son sürümden](https://github.com/yigitunalresmi/ada-notch/releases/latest) **Ada.dmg** dosyasını indirin.
+2. Açın ve **Ada**'yı **Applications** klasörüne sürükleyin.
+3. Uygulamalar'dan Ada'yı açın.
+
+Ada henüz Apple tarafından onaylı (notarized) değil. İlk açılışta macOS "geliştiricisi doğrulanamadı" derse:
+**Sistem Ayarları › Gizlilik ve Güvenlik** bölümünün altındaki **"Yine de Aç"** düğmesine basın. Bu yalnızca ilk
+açılışta gerekir.
+
+### 2. Tek komut
+
+Terminal'e yapıştırın; son sürümü indirir, Uygulamalar'a kurar ve açar (macOS uyarısı çıkmaz):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yigitunalresmi/ada-notch/main/install.sh | bash
+```
+
+### 3. Kaynaktan derleme
 
 ```bash
 git clone https://github.com/yigitunalresmi/ada-notch.git
@@ -69,29 +90,25 @@ cd ada-notch
 ```
 
 Betik uygulamayı derler, `build/Ada.app` paketini oluşturur, imzalar ve başlatır. Anahtar Zinciri'nizde bir
-"Apple Development" sertifikası varsa onunla, yoksa yerel (ad-hoc) imzayla imzalar. Ad-hoc imzada macOS,
-her yeniden derlemeden sonra izinleri yeniden sorabilir.
-
-Hazır derlenmiş, Apple tarafından onaylanmış (notarized) bir sürüm henüz yok; uygulamayı kaynaktan derlemeniz gerekir.
+"Apple Development" sertifikası varsa onunla, yoksa yerel (ad-hoc) imzayla imzalar.
 
 İlk açılışta ayarlar penceresi açılır. Sonrasında menü çubuğundaki ✦ simgesinden ya da açık çentiğin
 sağ üstündeki dişliden ulaşabilirsiniz.
 
 ## Güncelleme
 
-Ada yeni sürümleri kendisi denetler (açılışta ve altı saatte bir). Güncelleme olduğunda çentikte bildirir;
-Ayarlar › Güncellemeler'deki "Şimdi güncelle" düğmesi depodaki yeni sürümü indirir, Mac'inizde yeniden derler ve
-Ada'yı yeniden başlatır. Derleme başarısız olursa çalışan sürüm değişmez. İsterseniz otomatik kurulumu da
-açabilirsiniz; bu durumda Ada depodan gelen kodu size sormadan derleyip çalıştırır.
+Ada yeni sürümleri kendisi denetler (açılışta ve altı saatte bir) ve çentikte bildirir. Ayarlar › Güncellemeler'deki
+"Şimdi güncelle" düğmesi:
 
-Güncelleyici, uygulamayı derlediğiniz klasördeki git deposunu kullanır; bu yüzden o klasörü silmeyin. Elle
-güncellemek için:
+- **Hazır sürümde** (DMG ya da tek komutla kurulum): yeni sürümü GitHub'dan indirir, imzasını doğrular, eskisinin
+  yerine koyar ve Ada'yı yeniden başlatır.
+- **Kaynaktan derlenmiş kopyada:** depoyu çeker, Mac'inizde yeniden derler ve yeniden başlatır. Derlediğiniz
+  klasörü silmeyin.
 
-```bash
-git pull && ./build.sh run
-```
+Otomatik kurulum isteğe bağlıdır ve kapalı gelir.
 
-Güncelleyiciden önceki bir sürümü kurduysanız bu komutu bir kez elle çalıştırmanız gerekir.
+Hazır sürümler yerel (ad-hoc) imzalıdır. Bu yüzden macOS, her güncellemeden sonra Erişilebilirlik gibi bazı izinleri
+yeniden isteyebilir.
 
 ## İzinler
 
@@ -143,9 +160,14 @@ Hava durumu, şarkı sözleri ve asistan Ayarlar › Modüller'den kapatılabili
 Swift Package Manager ile yazılmış tek hedefli bir AppKit + SwiftUI uygulamasıdır; dış bağımlılığı yoktur.
 
 ```bash
-./build.sh        # yalnızca derle ve paketle
-./build.sh run    # derle, paketle, çalışan kopyayı kapatıp yeniden başlat
+./build.sh            # yalnızca derle ve paketle
+./build.sh run        # derle, paketle, çalışan kopyayı kapatıp yeniden başlat
+./release.sh          # dağıtım için dist/Ada.dmg ve dist/Ada.zip üret (Apple Silicon + Intel)
+./release.sh publish  # paketleri üret ve GitHub Releases'te yayımla
 ```
+
+`release.sh`, `SIGN_IDENTITY` (ör. bir "Developer ID Application" kimliği) ve `NOTARY_PROFILE` ortam değişkenleri
+verilirse paketi o kimlikle imzalar ve Apple onayına gönderir; verilmezse yerel imza kullanır.
 
 Uygulamayı `build/Ada.app` üzerinden (çift tıklayarak ya da `open` ile) başlatın. İkiliyi doğrudan
 terminalden çalıştırırsanız macOS gizlilik denetimi uygulamayı kapatır.
@@ -176,20 +198,23 @@ weather, tools and an assistant that can operate your Mac for you.
 - **Look:** five themes (Aurora, Neon, Gradient, Glass, Black), custom colors, glass clarity, size, display tuning
   (warmth, contrast, extra dimming)
 
-**Requirements:** macOS 14 or later (Liquid Glass on macOS 26+), Xcode or the Command Line Tools to build, and an
+**Requirements:** macOS 14 or later (Liquid Glass on macOS 26+), Apple Silicon or Intel, and an
 [Anthropic API key](https://console.anthropic.com/) for the assistant only.
 
 **Install:**
 
-```bash
-git clone https://github.com/yigitunalresmi/ada-notch.git
-cd ada-notch
-./build.sh run
-```
+- **Drag and drop:** download **Ada.dmg** from the [latest release](https://github.com/yigitunalresmi/ada-notch/releases/latest),
+  open it and drag Ada to Applications. Ada is not notarized yet: if macOS says the developer cannot be verified,
+  press **Open Anyway** in System Settings › Privacy & Security (first launch only).
+- **One command** (no macOS warning):
 
-There is no notarized download yet; build from source. Ada checks for new versions itself and updates from
-Settings › Updates (it pulls the repository, rebuilds on your Mac and restarts). Keep the folder you built from. Ada follows your system language (English or Turkish);
-change it in Settings › General › Language.
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/yigitunalresmi/ada-notch/main/install.sh | bash
+  ```
+- **From source:** `git clone https://github.com/yigitunalresmi/ada-notch.git && cd ada-notch && ./build.sh run`
+
+Ada checks for new versions itself and updates from Settings › Updates. It follows your system language (English
+or Turkish); change it in Settings › General › Language.
 
 **Privacy:** no servers, accounts or telemetry of its own. Data leaves your Mac only for the features you use:
 assistant conversations to api.anthropic.com (your key stays in the Keychain), an approximate location to
