@@ -34,6 +34,7 @@ struct NotchRootView: View {
     @ObservedObject var agenda = AgendaService.shared
     @ObservedObject var privacy = PrivacyService.shared
     @ObservedObject var downloads = DownloadsService.shared
+    @ObservedObject var focus = FocusService.shared
 
     var body: some View {
         let size = model.currentSize()
@@ -205,6 +206,7 @@ struct CollapsedView: View {
     @ObservedObject var countdown = CountdownService.shared
     @ObservedObject var agenda = AgendaService.shared
     @ObservedObject var downloads = DownloadsService.shared
+    @ObservedObject var focus = FocusService.shared
 
     var body: some View {
         HStack(spacing: 0) {
@@ -220,8 +222,14 @@ struct CollapsedView: View {
     @ViewBuilder var left: some View {
         if let hud = model.hud {
             HStack(spacing: 6) {
-                Image(systemName: hud.icon).foregroundStyle(hud.tint)
-                if hud.value != nil {
+                if let image = hud.image {
+                    Image(nsImage: image).resizable().frame(width: 18, height: 18)
+                } else {
+                    Image(systemName: hud.icon).foregroundStyle(hud.tint)
+                }
+                if let leftText = hud.leftText {
+                    Text(leftText).lineLimit(1)
+                } else if hud.value != nil {
                     Text(hud.title).lineLimit(1)
                 }
             }
@@ -243,6 +251,8 @@ struct CollapsedView: View {
             .font(.system(size: 11, weight: .semibold))
         } else if model.compactMusic {
             ArtworkView(image: music.artwork, size: 20, radius: 5)
+        } else if model.compactFocus, let mode = focus.current {
+            Image(systemName: mode.symbol).font(.system(size: 12, weight: .semibold)).foregroundStyle(.indigo)
         }
     }
 
@@ -288,7 +298,23 @@ struct CollapsedView: View {
 }
 
 struct EqualizerBars: View {
+    @ObservedObject var visualizer = AudioVisualizer.shared
+
     var body: some View {
+        if visualizer.active {
+            // Gerçek ses düzeyleri
+            HStack(alignment: .center, spacing: 2) {
+                ForEach(0..<4, id: \.self) { i in
+                    Capsule().fill(Color.green).frame(width: 2.5, height: 14 * CGFloat(max(0.14, visualizer.levels[i])))
+                }
+            }
+            .animation(.linear(duration: 0.08), value: visualizer.levels)
+        } else {
+            simulated
+        }
+    }
+
+    private var simulated: some View {
         TimelineView(.animation(minimumInterval: 0.1)) { ctx in
             let t = ctx.date.timeIntervalSinceReferenceDate
             HStack(alignment: .center, spacing: 2) {
@@ -357,6 +383,9 @@ struct TopBar: View {
             Color.clear.frame(width: model.notchSize.width - 10)
 
             HStack(spacing: 10) {
+                if prefs.isOn(.focus), let mode = FocusService.shared.current {
+                    Image(systemName: mode.symbol).foregroundStyle(.indigo).help(mode.name)
+                }
                 if prefs.isOn(.weather), let w = weather.current {
                     Label("\(prefs.temp(w.temperature))°", systemImage: w.symbol)
                         .labelStyle(.titleAndIcon)

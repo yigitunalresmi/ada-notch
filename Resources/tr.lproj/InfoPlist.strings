@@ -8,3 +8,4 @@
 "NSSpeechRecognitionUsageDescription" = "Ada, söylediklerinizi yazıya çevirmek için konuşma tanımayı kullanır.";
 "NSBluetoothAlwaysUsageDescription" = "Ada, bağlanan Bluetooth cihazlarını çentikte göstermek için Bluetooth'u kullanır.";
 "NSDownloadsFolderUsageDescription" = "Ada, süren indirmeleri çentikte göstermek için İndirilenler klasörünüzü izler.";
+"NSAudioCaptureUsageDescription" = "Ada, müzik görselleştiricisini hareket ettirmek için Mac'inizin çaldığı sesi dinler. Hiçbir şey kaydedilmez ya da saklanmaz.";

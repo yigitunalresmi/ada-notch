@@ -8,3 +8,4 @@
 "NSSpeechRecognitionUsageDescription" = "Ada uses speech recognition to turn what you say into text.";
 "NSBluetoothAlwaysUsageDescription" = "Ada uses Bluetooth to show connecting devices in the notch.";
 "NSDownloadsFolderUsageDescription" = "Ada watches your Downloads folder to show downloads in progress in the notch.";
+"NSAudioCaptureUsageDescription" = "Ada listens to the audio your Mac is playing to animate the music visualizer. Nothing is recorded or stored.";

@@ -22,6 +22,7 @@ struct ModulesSettings: View {
         (L("Canlı bildirimler ve ekran"), [.battery, .bluetooth, .hud, .xdr, .privacy, .network, .downloads]),
         (L("Araçlar"), [.timer, .clipboard, .notes, .stats, .shelf, .launcher, .mirror]),
         (L("Asistan"), [.assistant]),
+        (L("Gelişmiş (ek izin gerektirir)"), [.focus, .notifications, .visualizer, .lockscreen]),
     ]
 
     var body: some View {
@@ -44,6 +45,31 @@ struct ModulesSettings: View {
             }
         }
         .formStyle(.grouped)
+        .safeAreaInset(edge: .bottom) {
+            if prefs.isOn(.focus) || prefs.isOn(.notifications) {
+                FullDiskBanner()
+            }
+        }
+    }
+}
+
+/// Odak modu ve bildirimler için Tam Disk Erişimi durumunu gösterir.
+struct FullDiskBanner: View {
+    @State private var granted = FullDiskAccess.granted
+    @ObservedObject var notifications = NotificationWatcher.shared
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: granted ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(granted ? .green : .orange)
+            Text(granted ? (notifications.problem ?? L("Tam Disk Erişimi verildi.")) : L("Odak modu ve bildirimler için Tam Disk Erişimi gerekli. İzni verdikten sonra Ada'yı yeniden başlatın."))
+                .font(.callout)
+            Spacer()
+            if !granted { Button(L("Ayarı aç")) { FullDiskAccess.openSettings() } }
+        }
+        .padding(10)
+        .background(.bar)
+        .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in granted = FullDiskAccess.granted }
     }
 }
 

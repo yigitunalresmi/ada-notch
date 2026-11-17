@@ -52,9 +52,10 @@ enum ModuleID: String, CaseIterable, Identifiable {
     case music, lyrics, calendar, reminders, weather, battery, bluetooth, hud, xdr, stats
     case shelf, clipboard, timer, notes, mirror, launcher, assistant
     case privacy, downloads, network, ticker
+    case focus, notifications, visualizer, lockscreen
 
     /// İzin penceresi açtığı ya da dışarıya istek gönderdiği için kapalı gelen modüller.
-    static let defaultOff: Set<ModuleID> = [.downloads, .ticker]
+    static let defaultOff: Set<ModuleID> = [.downloads, .ticker, .focus, .notifications, .visualizer, .lockscreen]
 
     var id: String { rawValue }
 
@@ -80,6 +81,10 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .downloads: return L("İndirme takibi")
         case .network: return L("Ağ bildirimleri")
         case .ticker: return L("Piyasa takibi")
+        case .focus: return L("Odak modu göstergesi")
+        case .notifications: return L("Bildirimleri çentikte göster")
+        case .visualizer: return L("Gerçek ses görselleştirici")
+        case .lockscreen: return L("Kilit ekranında görün")
         case .assistant: return L("Asistan")
         }
     }
@@ -106,6 +111,10 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .downloads: return "arrow.down.circle"
         case .network: return "wifi"
         case .ticker: return "chart.line.uptrend.xyaxis"
+        case .focus: return "moon.fill"
+        case .notifications: return "bell.badge"
+        case .visualizer: return "waveform"
+        case .lockscreen: return "lock.fill"
         case .assistant: return "sparkles"
         }
     }
@@ -132,6 +141,10 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .downloads: return L("İndirilenler klasöründeki süren indirmeleri çentikte gösterir. Klasöre erişim izni ister.")
         case .network: return L("İnternet bağlantısı kesildiğinde, geri geldiğinde ya da ağ değiştiğinde bildirir.")
         case .ticker: return L("Seçtiğiniz kripto fiyatlarını Ana sekmede gösterir (Binance'in açık verisinden).")
+        case .focus: return L("Odak modu açılıp kapandığında bildirir ve simgesini gösterir. Tam Disk Erişimi ister.")
+        case .notifications: return L("Gelen bildirimleri çentikte gösterir. Tam Disk Erişimi ister; bildirim içerikleri yalnızca bu Mac'te okunur.")
+        case .visualizer: return L("Müzik çalarken ekolayzır çubukları gerçek sese göre hareket eder. Sistem sesini dinleme izni ister; ses kaydedilmez.")
+        case .lockscreen: return L("Ada'yı kilit ekranında da gösterir. Deneyseldir; kapatmak için Ada'yı yeniden başlatın.")
         case .assistant: return L("Claude ile sohbet; takvim, müzik ve Mac ayarlarını sizin için yönetir.")
         }
     }
@@ -285,6 +298,12 @@ struct HUDInfo: Equatable {
     var title: String
     var value: Double? = nil
     var label: String? = nil
+    /// Simge yerine gösterilecek görsel (ör. uygulama simgesi).
+    var image: NSImage? = nil
+    /// Simgenin yanındaki metin (ör. bildirimi gönderen).
+    var leftText: String? = nil
+    /// Uzun metinler için daha geniş gösterge.
+    var wide: Bool = false
     var tint: Color = .white
 }
 
@@ -317,14 +336,15 @@ final class NotchModel: ObservableObject {
     }
     var compactDownload: Bool { Prefs.shared.isOn(.downloads) && DownloadsService.shared.current != nil }
     var compactPrivacy: Bool { Prefs.shared.isOn(.privacy) && PrivacyService.shared.anyOn }
+    var compactFocus: Bool { Prefs.shared.isOn(.focus) && FocusService.shared.current != nil }
     var compactTimer: Bool { Prefs.shared.isOn(.timer) && CountdownService.shared.running }
     var compactMusic: Bool { Prefs.shared.isOn(.music) && Prefs.shared.showMusicWings && MusicService.shared.isPlaying }
 
     func currentSize() -> CGSize {
         if expanded { return expandedSize }
-        if hud != nil { return CGSize(width: notchSize.width + 2 * 118, height: notchSize.height) }
+        if let hud { return CGSize(width: notchSize.width + 2 * (hud.wide ? 196 : 118), height: notchSize.height) }
         var wing: CGFloat = 0
-        if compactPrivacy { wing = 30 }
+        if compactPrivacy || compactFocus { wing = 30 }
         if compactMusic { wing = 46 }
         if compactDownload { wing = 76 }
         if compactMeeting { wing = 72 }
@@ -470,6 +490,10 @@ final class ModuleManager {
         NetworkService.shared.setEnabled(p.isOn(.network))
         TickerService.shared.setEnabled(p.isOn(.ticker))
         CapsLockMonitor.shared.setEnabled(p.isOn(.hud))
+        FocusService.shared.setEnabled(p.isOn(.focus))
+        NotificationWatcher.shared.setEnabled(p.isOn(.notifications))
+        AudioVisualizer.shared.setEnabled(p.isOn(.visualizer) && p.isOn(.music))
+        if p.isOn(.lockscreen) { NotchController.shared.attachToLockScreen() }
         let model = NotchModel.shared
         if !model.availableTabs.contains(model.tab) { model.tab = .home }
     }

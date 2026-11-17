@@ -22,6 +22,11 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 - İnternet kesildi / geri geldi / ağ değişti bildirimleri, Caps Lock göstergesi
 - İndirilenler klasöründeki süren indirmeler (isteğe bağlı)
 
+**Gelişmiş (varsayılan kapalı, ek izin ister)**
+- Odak modu göstergesi ve gelen bildirimleri çentikte gösterme — Tam Disk Erişimi ister
+- Gerçek ses görselleştirici — sistem sesini dinleme izni ister; ses kaydedilmez
+- Kilit ekranında görünme — deneysel
+
 **Araçlar**
 - Zamanlayıcı ve Pomodoro, pano geçmişi, hızlı not, işlemci/bellek/ağ
 - Hızlı işlemler: görünüm, uyanık tut, ekran alıntısı, sessiz, renk seçici, ekranı uyut, ses çıkışı seçimi
@@ -83,6 +88,8 @@ Ada yalnızca açtığınız modüllerin ihtiyaç duyduğu izinleri ister:
 | Kamera | Ayna |
 | Mikrofon, Konuşma Tanıma | Sesli komut ve sesli sohbet |
 | İndirilenler klasörü | İndirme takibi (varsayılan kapalı) |
+| Tam Disk Erişimi | Odak modu ve bildirimler (varsayılan kapalı) |
+| Sistem Sesi Kaydı | Gerçek ses görselleştirici (varsayılan kapalı) |
 | Ekran Kaydı | Ekran alıntısı ve (açarsanız) asistanın ekrana bakması |
 
 ## Gizlilik
@@ -107,7 +114,10 @@ Hava durumu, şarkı sözleri ve asistan Ayarlar › Modüller'den kapatılabili
   tüketir ve Night Shift / True Tone ile birlikte renk tonunu geçici olarak sabitleyebilir.
 - Ses göstergesi, Erişilebilirlik izni verilmeden macOS'in kendi göstergesini gizleyemez.
 - Müzik bilgisi AppleScript ile okunur; yalnızca Spotify ve Apple Music desteklenir.
-- Bildirimlerin çentikte gösterilmesi ve yakındaki cihazlarla paylaşım yoktur.
+- "Gelişmiş" modüller macOS'in belgelenmemiş dosyalarına ve arayüzlerine dayanır: Odak modu ve bildirimler
+  sistemin kendi veritabanlarını okur, kilit ekranı özel bir SkyLight arayüzü kullanır. Bir macOS güncellemesiyle
+  çalışmayı bırakabilirler. Zamanlanmış (otomatik açılan) Odak modları algılanmayabilir.
+- Yakındaki cihazlarla paylaşım yoktur.
 
 ## Geliştirme
 
@@ -141,6 +151,9 @@ weather, tools and an assistant that can operate your Mac for you.
   awake, capture, mute, color picker, sleep display, audio output), file shelf with AirDrop, app launcher, mirror
 - **Assistant (Claude):** text, push-to-talk and hands-free voice chat; manages calendar, reminders, music, volume,
   brightness, dark mode, Wi‑Fi, apps, windows, files, timers, Shortcuts and Ada's own settings; persistent memory
+- **Advanced (off by default):** Focus mode indicator and notifications in the notch (Full Disk Access), a real
+  audio visualizer (system audio permission; nothing is recorded), and showing on the lock screen (experimental).
+  These rely on undocumented macOS files and interfaces and may break with a macOS update.
 - **Look:** five themes (Aurora, Neon, Gradient, Glass, Black), custom colors, glass clarity, size, display tuning
   (warmth, contrast, extra dimming)
 

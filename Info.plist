@@ -23,6 +23,7 @@
   <key>NSMicrophoneUsageDescription</key><string>Ada uses the microphone so you can talk to the assistant.</string>
   <key>NSSpeechRecognitionUsageDescription</key><string>Ada uses speech recognition to turn what you say into text.</string>
   <key>NSDownloadsFolderUsageDescription</key><string>Ada watches your Downloads folder to show downloads in progress in the notch.</string>
+  <key>NSAudioCaptureUsageDescription</key><string>Ada listens to the audio your Mac is playing to animate the music visualizer. Nothing is recorded or stored.</string>
   <key>NSBluetoothAlwaysUsageDescription</key><string>Ada uses Bluetooth to show connecting devices in the notch.</string>
 </dict>
 </plist>

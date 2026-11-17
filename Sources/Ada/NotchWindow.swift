@@ -81,6 +81,11 @@ final class NotchController: NSObject, NSWindowDelegate {
 
     @objc private func screensChanged() { reposition() }
 
+    func attachToLockScreen() {
+        guard panel != nil else { return }
+        LockScreen.attach(panel)
+    }
+
     private func reposition() {
         let target = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main ?? NSScreen.screens.first
         guard let s = target else { return }
