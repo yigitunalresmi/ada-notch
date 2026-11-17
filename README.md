@@ -168,8 +168,8 @@ Swift Package Manager ile yazılmış tek hedefli bir AppKit + SwiftUI uygulamas
 ./release.sh publish  # paketleri üret ve GitHub Releases'te yayımla
 ```
 
-`release.sh`, `SIGN_IDENTITY` (ör. bir "Developer ID Application" kimliği) ve `NOTARY_PROFILE` ortam değişkenleri
-verilirse paketi o kimlikle imzalar ve Apple onayına gönderir; verilmezse yerel imza kullanır.
+`release.sh`, Anahtar Zinciri'nde bir "Developer ID Application" sertifikası ve `ada-notary` adlı bir notarytool
+profili bulursa paketi o kimlikle imzalar ve Apple onayına gönderir; bulamazsa yerel imza kullanır.
 
 Uygulamayı `build/Ada.app` üzerinden (çift tıklayarak ya da `open` ile) başlatın. İkiliyi doğrudan
 terminalden çalıştırırsanız macOS gizlilik denetimi uygulamayı kapatır.

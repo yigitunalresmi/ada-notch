@@ -4,9 +4,14 @@
 #   ./release.sh            dist/ altında paketleri üretir
 #   ./release.sh publish    paketleri üretir ve GitHub Releases'e yükler
 #
-# İsteğe bağlı ortam değişkenleri:
-#   SIGN_IDENTITY   İmza kimliği (ör. "Developer ID Application: …"). Verilmezse yerel (ad-hoc) imza kullanılır.
-#   NOTARY_PROFILE  `xcrun notarytool store-credentials` ile kaydedilmiş profil adı. Verilirse Apple onayı alınır.
+# Apple onayı (notarization) kendiliğinden devreye girer, şu ikisi varsa:
+#   1. Anahtar Zinciri'nde bir "Developer ID Application" sertifikası
+#   2. `xcrun notarytool store-credentials ada-notary` ile kaydedilmiş onay bilgisi
+# İkisinden biri eksikse paket yerel (ad-hoc) imzayla üretilir.
+#
+# İsteğe bağlı ortam değişkenleri (otomatik algılamayı geçersiz kılar):
+#   SIGN_IDENTITY   İmza kimliği
+#   NOTARY_PROFILE  notarytool profil adı
 set -e
 cd "$(dirname "$0")"
 
@@ -35,7 +40,21 @@ PLIST="$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" -c "Set :CFBundleShortVersionString $VERSION" \
   -c "Add :AdaCommit string $COMMIT" -c "Add :AdaChannel string release" "$PLIST"
 
+# Developer ID sertifikası ve onay profili varsa kullan.
+if [ -z "$SIGN_IDENTITY" ]; then
+  SIGN_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk '{print $2}')
+fi
+if [ -n "$SIGN_IDENTITY" ] && [ -z "$NOTARY_PROFILE" ]; then
+  if xcrun notarytool history --keychain-profile ada-notary > /dev/null 2>&1; then NOTARY_PROFILE="ada-notary"; fi
+fi
 IDENTITY="${SIGN_IDENTITY:--}"
+if [ "$IDENTITY" = "-" ]; then
+  echo "İmza: yerel (ad-hoc) — Apple onayı yok"
+elif [ -n "$NOTARY_PROFILE" ]; then
+  echo "İmza: Developer ID — Apple onayı alınacak"
+else
+  echo "İmza: Developer ID — onay profili (ada-notary) bulunamadı, Apple onayı alınmayacak"
+fi
 if [ -n "$NOTARY_PROFILE" ]; then
   # Apple onayı için güçlendirilmiş çalışma zamanı ve yetkiler gerekir.
   codesign --force --options runtime --timestamp --entitlements Ada.entitlements --sign "$IDENTITY" "$APP"
@@ -50,6 +69,7 @@ cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "Ada" -srcfolder "$STAGE" -ov -format UDZO -quiet dist/Ada.dmg
 rm -rf "$STAGE"
+[ "$IDENTITY" != "-" ] && codesign --force --timestamp --sign "$IDENTITY" dist/Ada.dmg
 
 if [ -n "$NOTARY_PROFILE" ]; then
   echo "Apple onayı bekleniyor…"
