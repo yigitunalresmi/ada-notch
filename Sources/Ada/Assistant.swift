@@ -152,6 +152,10 @@ final class AssistantEngine: ObservableObject {
     @Published var busy = false
     @Published var status = ""
     @Published var pending: PendingConfirm?
+    /// Kısayolla alınan seçili metin; hızlı işlem kartında gösterilir.
+    @Published var selection: String?
+    /// Yazı efekti tamamlanmış yanıtlar.
+    var revealed = Set<UUID>()
     @Published var hasKey = (Keychain.get() ?? "").isEmpty == false
 
     private var history: [[String: Any]] = []

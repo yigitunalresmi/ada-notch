@@ -172,6 +172,7 @@ final class CountdownService: ObservableObject {
             if Prefs.shared.timerSound { NSSound(named: "Glass")?.play() }
             if pomodoro {
                 working.toggle()
+                if !working { NotchModel.shared.celebration += 1 }
                 NotchModel.shared.showHUD(HUDInfo(icon: working ? "brain.head.profile" : "cup.and.saucer.fill",
                                                   title: working ? L("Odak zamanı") : L("Mola zamanı"), tint: .orange), seconds: 5)
                 begin(minutes: working ? Prefs.shared.pomodoroWork : Prefs.shared.pomodoroBreak, label: working ? L("Odak") : L("Mola"))
@@ -179,6 +180,7 @@ final class CountdownService: ObservableObject {
             }
             let name = label.isEmpty ? L("Süre doldu") : Lf("%@ · süre doldu", "\(label)")
             stop()
+            NotchModel.shared.celebration += 1
             NotchModel.shared.showHUD(HUDInfo(icon: "bell.fill", title: name, tint: .orange), seconds: 5)
         }
     }
@@ -283,6 +285,7 @@ struct ToolsView: View {
     private var statsRow: some View {
         HStack(spacing: 16) {
             stat("cpu", L("İşlemci"), "%\(Int((stats.cpu * 100).rounded()))")
+            Sparkline(values: stats.cpuHistory).frame(width: 46, height: 12).padding(.leading, -8)
             stat("memorychip", L("Bellek"), String(format: "%.1f / %.0f GB", stats.memUsed / 1_073_741_824, stats.memTotal / 1_073_741_824))
             stat("arrow.down", L("İndirme"), StatsService.rate(stats.netDown))
             stat("arrow.up", L("Yükleme"), StatsService.rate(stats.netUp))

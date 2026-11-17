@@ -168,6 +168,24 @@ final class NotchController: NSObject, NSWindowDelegate {
         model.focusInput += 1
     }
 
+    /// Öndeki uygulamada seçili metni alıp asistanı hızlı işlemlerle açar.
+    func askAboutSelection() {
+        guard Prefs.shared.isOn(.assistant) else { return }
+        guard AX.trusted else {
+            model.showHUD(HUDInfo(icon: "exclamationmark.triangle.fill", title: L("Erişilebilirlik izni gerekli"), tint: .orange), seconds: 2.6)
+            return
+        }
+        guard let text = AX.selectedText()?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+            model.showHUD(HUDInfo(icon: "text.cursor", title: L("Seçili metin yok"), tint: .gray), seconds: 2)
+            return
+        }
+        AssistantEngine.shared.selection = String(text.prefix(12000))
+        model.expand(tab: .assistant)
+        lastInside = Date()
+        panel.makeKeyAndOrderFront(nil)
+        model.focusInput += 1
+    }
+
     func makeKey() {
         panel.makeKey()
     }
@@ -186,23 +204,46 @@ final class NotchController: NSObject, NSWindowDelegate {
 final class HotKey {
     static let shared = HotKey()
     private var ref: EventHotKeyRef?
+    private var selectionRef: EventHotKeyRef?
     private var installed = false
 
+    private func install() {
+        guard !installed else { return }
+        installed = true
+        var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        InstallEventHandler(GetApplicationEventTarget(), { _, event, _ in
+            var hk = EventHotKeyID()
+            GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil,
+                              MemoryLayout<EventHotKeyID>.size, nil, &hk)
+            let id = hk.id
+            DispatchQueue.main.async {
+                if id == 2 { NotchController.shared.askAboutSelection() } else { NotchController.shared.toggleAssistant() }
+            }
+            return noErr
+        }, 1, &spec, nil, nil)
+    }
+
+    /// ⌥ Boşluk: asistanı aç.
     func setEnabled(_ on: Bool) {
         if on, ref == nil {
-            if !installed {
-                var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-                InstallEventHandler(GetApplicationEventTarget(), { _, _, _ in
-                    DispatchQueue.main.async { NotchController.shared.toggleAssistant() }
-                    return noErr
-                }, 1, &spec, nil, nil)
-                installed = true
-            }
+            install()
             let id = EventHotKeyID(signature: OSType(0x4144_4131), id: 1)
             RegisterEventHotKey(UInt32(kVK_Space), UInt32(optionKey), id, GetApplicationEventTarget(), 0, &ref)
         } else if !on, let r = ref {
             UnregisterEventHotKey(r)
             ref = nil
+        }
+    }
+
+    /// ⌥⇧ Boşluk: seçili metinle asistanı aç.
+    func setSelectionEnabled(_ on: Bool) {
+        if on, selectionRef == nil {
+            install()
+            let id = EventHotKeyID(signature: OSType(0x4144_4131), id: 2)
+            RegisterEventHotKey(UInt32(kVK_Space), UInt32(optionKey | shiftKey), id, GetApplicationEventTarget(), 0, &selectionRef)
+        } else if !on, let r = selectionRef {
+            UnregisterEventHotKey(r)
+            selectionRef = nil
         }
     }
 }

@@ -10,7 +10,7 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 **Ana sekme**
 - Spotify ve Apple Music: kapak, ilerleme çubuğu, oynatma kontrolleri, karışık çalma, zamanlı şarkı sözleri
 - Takvim ve anımsatıcılar; görüntülü toplantılar için "Katıl" düğmesi
-- Konuma göre hava durumu
+- Konuma göre hava durumu; tıklayınca saatlik tahmin
 - Piyasa takibi: seçtiğiniz kripto fiyatları (isteğe bağlı)
 
 **Kapalı çentikte canlı göstergeler**
@@ -30,7 +30,7 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 **Araçlar**
 - Zamanlayıcı ve Pomodoro, pano geçmişi, hızlı not, işlemci/bellek/ağ
 - Hızlı işlemler: görünüm, uyanık tut, ekran alıntısı, sessiz, renk seçici, ekranı uyut, ses çıkışı seçimi
-- Dosya rafı (sürükle-bırak, AirDrop), uygulama başlatıcı, ayna
+- Dosya rafı (sürükle-bırak, AirDrop; isteğe bağlı olarak yeni ekran görüntüleri kendiliğinden eklenir), uygulama başlatıcı, ayna
 
 **Asistan (Claude)**
 - Yazılı sohbet, bas-konuş dikte ve eller serbest sesli sohbet modu; `⌥ Boşluk` kısayolu
@@ -38,9 +38,12 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
   uygulama açma/kapama, pencere yerleştirme, seçili metni okuma, dosya arama, zamanlayıcı ve Pomodoro,
   pano, not, Kestirmeler, web araması, Ada'nın kendi ayarları
 - Kalıcı hafıza ve özel talimatlar
+- `⌥⇧ Boşluk`: herhangi bir uygulamada seçili metni asistana gönderir (özetle, çevir, yazımı düzelt, açıkla, yanıt yaz)
 - İsteğe bağlı: ekrana bakma ve AppleScript çalıştırma (her betik için onay ister)
 
 **Görünüm ve ekran**
+- Animasyonlar: sekme geçişleri, kayan sekme seçimi, düğme tepkileri, asistan yanıtlarında yazı efekti,
+  düşünürken kenar ışıltısı, zamanlayıcı bitince konfeti (Ayarlar'dan azaltılabilir)
 - Beş tema: Aurora (hareketli renk bulutları), Neon (dönen ışıklı kenar), Gradyan, Cam, Siyah
 - Tema renkleri, hazır renk paletleri, cam saydamlığı, boyut, köşe yuvarlaklığı, vurgu rengi
 - Ekran iyileştirme: renk sıcaklığı, kontrast ve en düşük parlaklığın altına inen ek karartma

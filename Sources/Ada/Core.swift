@@ -52,10 +52,10 @@ enum ModuleID: String, CaseIterable, Identifiable {
     case music, lyrics, calendar, reminders, weather, battery, bluetooth, hud, xdr, stats
     case shelf, clipboard, timer, notes, mirror, launcher, assistant
     case privacy, downloads, network, ticker
-    case focus, notifications, visualizer, lockscreen
+    case focus, notifications, visualizer, lockscreen, screenshots
 
     /// İzin penceresi açtığı ya da dışarıya istek gönderdiği için kapalı gelen modüller.
-    static let defaultOff: Set<ModuleID> = [.downloads, .ticker, .focus, .notifications, .visualizer, .lockscreen]
+    static let defaultOff: Set<ModuleID> = [.downloads, .ticker, .focus, .notifications, .visualizer, .lockscreen, .screenshots]
 
     var id: String { rawValue }
 
@@ -85,6 +85,7 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .notifications: return L("Bildirimleri çentikte göster")
         case .visualizer: return L("Gerçek ses görselleştirici")
         case .lockscreen: return L("Kilit ekranında görün")
+        case .screenshots: return L("Ekran görüntülerini rafa ekle")
         case .assistant: return L("Asistan")
         }
     }
@@ -115,6 +116,7 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .notifications: return "bell.badge"
         case .visualizer: return "waveform"
         case .lockscreen: return "lock.fill"
+        case .screenshots: return "camera.viewfinder"
         case .assistant: return "sparkles"
         }
     }
@@ -145,6 +147,7 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .notifications: return L("Gelen bildirimleri çentikte gösterir. Tam Disk Erişimi ister; bildirim içerikleri yalnızca bu Mac'te okunur.")
         case .visualizer: return L("Müzik çalarken ekolayzır çubukları gerçek sese göre hareket eder. Sistem sesini dinleme izni ister; ses kaydedilmez.")
         case .lockscreen: return L("Ada'yı kilit ekranında da gösterir. Deneyseldir; kapatmak için Ada'yı yeniden başlatın.")
+        case .screenshots: return L("Yeni aldığınız ekran görüntüleri kendiliğinden dosya rafına eklenir.")
         case .assistant: return L("Claude ile sohbet; takvim, müzik ve Mac ayarlarını sizin için yönetir.")
         }
     }
@@ -160,6 +163,8 @@ final class Prefs: ObservableObject {
     @Published var openOnHover: Bool { didSet { d.set(openOnHover, forKey: "openOnHover") } }
     @Published var hoverDelay: Double { didSet { d.set(hoverDelay, forKey: "hoverDelay") } }
     @Published var haptics: Bool { didSet { d.set(haptics, forKey: "haptics") } }
+    @Published var reduceMotion: Bool { didSet { d.set(reduceMotion, forKey: "reduceMotion") } }
+    @Published var selectionHotkey: Bool { didSet { d.set(selectionHotkey, forKey: "selectionHotkey") } }
     @Published var glass: Bool { didSet { d.set(glass, forKey: "glass") } }
     @Published var hotkey: Bool { didSet { d.set(hotkey, forKey: "hotkey") } }
     @Published var model: String { didSet { d.set(model, forKey: "model") } }
@@ -200,6 +205,8 @@ final class Prefs: ObservableObject {
         openOnHover = d.object(forKey: "openOnHover") as? Bool ?? true
         hoverDelay = d.object(forKey: "hoverDelay") as? Double ?? 0.12
         haptics = d.object(forKey: "haptics") as? Bool ?? true
+        reduceMotion = d.object(forKey: "reduceMotion") as? Bool ?? false
+        selectionHotkey = d.object(forKey: "selectionHotkey") as? Bool ?? true
         glass = d.object(forKey: "glass") as? Bool ?? true
         hotkey = d.object(forKey: "hotkey") as? Bool ?? true
         model = d.string(forKey: "model") ?? "claude-opus-5-5"
@@ -316,6 +323,8 @@ final class NotchModel: ObservableObject {
     @Published var notchSize = CGSize(width: 200, height: 32)
     @Published var dropTargeted = false
     @Published var focusInput = 0
+    /// Her artışta konfeti patlar.
+    @Published var celebration = 0
 
     var expandedSize: CGSize { CGSize(width: Prefs.shared.expandedWidth, height: Prefs.shared.expandedHeight) }
     private var hudToken = 0
@@ -494,6 +503,7 @@ final class ModuleManager {
         NotificationWatcher.shared.setEnabled(p.isOn(.notifications))
         AudioVisualizer.shared.setEnabled(p.isOn(.visualizer) && p.isOn(.music))
         if p.isOn(.lockscreen) { NotchController.shared.attachToLockScreen() }
+        ScreenshotWatcher.shared.setEnabled(p.isOn(.screenshots) && p.isOn(.shelf))
         let model = NotchModel.shared
         if !model.availableTabs.contains(model.tab) { model.tab = .home }
     }

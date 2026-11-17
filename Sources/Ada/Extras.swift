@@ -110,6 +110,24 @@ enum QuickAction {
         DispatchQueue.global().async { Shell.run("/usr/bin/pmset", ["displaysleepnow"]) }
     }
 
+    private static func wifiDevice() -> String? {
+        let lines = Shell.run("/usr/sbin/networksetup", ["-listallhardwareports"]).out.components(separatedBy: "\n")
+        for (i, line) in lines.enumerated() where line.contains("Wi-Fi") || line.contains("AirPort") {
+            if i + 1 < lines.count, let dev = lines[i + 1].components(separatedBy: ": ").last { return dev }
+        }
+        return nil
+    }
+
+    static func wifiIsOn() -> Bool {
+        guard let dev = wifiDevice() else { return false }
+        return Shell.run("/usr/sbin/networksetup", ["-getairportpower", dev]).out.hasSuffix("On")
+    }
+
+    static func setWiFi(_ on: Bool) {
+        guard let dev = wifiDevice() else { return }
+        Shell.run("/usr/sbin/networksetup", ["-setairportpower", dev, on ? "on" : "off"])
+    }
+
     private static var sampler: NSColorSampler?
 
     /// Ekrandan bir renk seçtirir ve onaltılık kodunu panoya kopyalar.
@@ -137,9 +155,16 @@ enum QuickAction {
 struct QuickActionsRow: View {
     @ObservedObject var awake = KeepAwakeService.shared
     @State private var muted = Audio.muted()
+    @State private var wifi = true
 
     var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 6) {
+            action(wifi ? "wifi" : "wifi.slash", "Wi‑Fi", on: wifi) {
+                let target = !wifi
+                wifi = target
+                DispatchQueue.global().async { QuickAction.setWiFi(target) }
+            }
             action("moon.fill", L("Görünüm")) { QuickAction.toggleDarkMode() }
             action(awake.active ? "cup.and.saucer.fill" : "cup.and.saucer", L("Uyanık"), on: awake.active) { awake.toggle() }
             action("camera.viewfinder", L("Alıntı")) { QuickAction.screenshotSelection() }
@@ -165,7 +190,15 @@ struct QuickActionsRow: View {
             .fixedSize()
             Spacer(minLength: 0)
         }
-        .onAppear { muted = Audio.muted() }
+        .padding(.vertical, 2)
+        }
+        .onAppear {
+            muted = Audio.muted()
+            DispatchQueue.global().async {
+                let on = QuickAction.wifiIsOn()
+                DispatchQueue.main.async { wifi = on }
+            }
+        }
     }
 
     private func action(_ icon: String, _ title: String, on: Bool = false, _ run: @escaping () -> Void) -> some View {

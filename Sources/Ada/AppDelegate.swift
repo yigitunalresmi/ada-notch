@@ -13,8 +13,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         HotKey.shared.setEnabled(Prefs.shared.hotkey)
         Prefs.shared.$hotkey.dropFirst().sink { HotKey.shared.setEnabled($0) }.store(in: &bag)
+        HotKey.shared.setSelectionEnabled(Prefs.shared.selectionHotkey)
+        Prefs.shared.$selectionHotkey.dropFirst().sink { HotKey.shared.setSelectionEnabled($0) }.store(in: &bag)
 
         installMainMenu()
+        if ProcessInfo.processInfo.environment["ADA_TEST_CONFETTI"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { NotchModel.shared.celebration += 1 }
+        }
         // İlk açılışta ayarlar penceresini göster (API anahtarı ve modüller için).
         if !UserDefaults.standard.bool(forKey: "firstRunDone") {
             UserDefaults.standard.set(true, forKey: "firstRunDone")

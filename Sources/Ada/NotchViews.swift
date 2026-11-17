@@ -35,6 +35,8 @@ struct NotchRootView: View {
     @ObservedObject var privacy = PrivacyService.shared
     @ObservedObject var downloads = DownloadsService.shared
     @ObservedObject var focus = FocusService.shared
+    @ObservedObject var engine = AssistantEngine.shared
+    @ObservedObject var speech = SpeechService.shared
 
     var body: some View {
         let size = model.currentSize()
@@ -51,7 +53,7 @@ struct NotchRootView: View {
             Group {
                 if model.expanded {
                     ExpandedView()
-                        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+                        .transition(.blurReplace.combined(with: .scale(0.95, anchor: .top)))
                 } else {
                     CollapsedView()
                         .transition(.opacity)
@@ -71,9 +73,17 @@ struct NotchRootView: View {
         .onChange(of: model.dropTargeted) { _, targeted in
             if targeted, prefs.isOn(.shelf) { model.expand(tab: .shelf) }
         }
+        .overlay {
+            if model.expanded, !prefs.reduceMotion, engine.busy || speech.listening {
+                ActivityGlow(shape: shape, color: speech.listening ? .red : prefs.accentColor)
+            }
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .animation(.spring(response: 0.36, dampingFraction: 0.82), value: size)
-        .animation(.easeInOut(duration: 0.2), value: model.tab)
+        .overlay { CelebrationLayer() }
+        .animation(.spring(response: 0.38, dampingFraction: 0.76), value: size)
+        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: model.tab)
+        .animation(.easeInOut(duration: 0.3), value: engine.busy)
+        .animation(.easeInOut(duration: 0.25), value: model.hud)
         .preferredColorScheme(.dark)
     }
 }
@@ -276,6 +286,7 @@ struct CollapsedView: View {
                     .frame(width: 54, height: 5)
                     Text(hud.label ?? "\(Int((v * 100).rounded()))")
                         .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                        .contentTransition(.numericText())
                         .frame(width: 30, alignment: .trailing)
                 }
             } else {
@@ -285,6 +296,8 @@ struct CollapsedView: View {
             Text(formatClock(countdown.remaining))
                 .font(.system(size: 12, weight: .semibold).monospacedDigit())
                 .foregroundStyle(.orange)
+                .contentTransition(.numericText(countsDown: true))
+                .animation(.default, value: Int(countdown.remaining))
         } else if model.compactMeeting, let e = agenda.next {
             TimelineView(.periodic(from: .now, by: 20)) { _ in
                 Text(e.countdown).font(.system(size: 12, weight: .semibold).monospacedDigit())
@@ -346,6 +359,8 @@ struct ExpandedView: View {
                 case .mirror: MirrorView()
                 }
             }
+            .id(model.tab)
+            .transition(.blurReplace)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 22)
             .padding(.top, 6)
@@ -360,6 +375,7 @@ struct TopBar: View {
     @ObservedObject var prefs = Prefs.shared
     @ObservedObject var battery = BatteryService.shared
     @ObservedObject var weather = WeatherService.shared
+    @Namespace private var tabSpace
 
     var body: some View {
         HStack(spacing: 0) {
@@ -368,9 +384,15 @@ struct TopBar: View {
                     Button { model.tab = tab } label: {
                         Image(systemName: tab.icon)
                             .font(.system(size: 12, weight: .semibold))
+                            .symbolEffect(.bounce, value: model.tab == tab)
                             .frame(width: 30, height: 22)
-                            .background(model.tab == tab ? Color.white.opacity(0.20) : .clear, in: Capsule())
-                            .overlay(Capsule().strokeBorder(.white.opacity(model.tab == tab ? 0.22 : 0), lineWidth: 0.8))
+                            .background {
+                                if model.tab == tab {
+                                    Capsule().fill(Color.white.opacity(0.20))
+                                        .overlay(Capsule().strokeBorder(.white.opacity(0.22), lineWidth: 0.8))
+                                        .matchedGeometryEffect(id: "selected-tab", in: tabSpace)
+                                }
+                            }
                             .foregroundStyle(model.tab == tab ? .white : .white.opacity(0.55))
                             .contentShape(Rectangle())
                     }
@@ -389,18 +411,21 @@ struct TopBar: View {
                 if prefs.isOn(.weather), let w = weather.current {
                     Label("\(prefs.temp(w.temperature))°", systemImage: w.symbol)
                         .labelStyle(.titleAndIcon)
+                        .symbolEffect(.bounce, value: w.code)
                 }
                 if prefs.isOn(.battery), let level = battery.level {
                     HStack(spacing: 3) {
                         Image(systemName: battery.symbol)
                             .foregroundStyle(battery.onAC ? .green : (level <= 20 ? .red : .white))
-                        Text("%\(level)")
+                        Text("%\(level)").contentTransition(.numericText())
                     }
+                    .help(battery.timeRemaining)
+                    .animation(.default, value: level)
                 }
                 Button { AppDelegate.showSettings() } label: {
                     Image(systemName: "gearshape.fill").foregroundStyle(.white.opacity(0.6))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(HoverIconStyle())
                 .help(L("Ayarlar"))
             }
             .font(.system(size: 11, weight: .medium).monospacedDigit())
@@ -475,13 +500,49 @@ struct ArtworkView: View {
 struct PillButtonStyle: ButtonStyle {
     var tint: Color = .white.opacity(0.14)
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 11, weight: .semibold))
-            .padding(.horizontal, 10).padding(.vertical, 5)
-            .background(tint.opacity(configuration.isPressed ? 0.6 : 1), in: Capsule())
-            .overlay(Capsule().strokeBorder(LinearGradient(
-                colors: [.white.opacity(0.32), .white.opacity(0.06)],
-                startPoint: .top, endPoint: .bottom), lineWidth: 0.8))
-            .contentShape(Capsule())
+        PillBody(configuration: configuration, tint: tint)
+    }
+
+    private struct PillBody: View {
+        let configuration: Configuration
+        let tint: Color
+        @State private var hover = false
+
+        var body: some View {
+            configuration.label
+                .font(.system(size: 11, weight: .semibold))
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(tint.opacity(configuration.isPressed ? 0.6 : 1), in: Capsule())
+                .overlay(Capsule().fill(.white.opacity(hover ? 0.08 : 0)))
+                .overlay(Capsule().strokeBorder(LinearGradient(
+                    colors: [.white.opacity(hover ? 0.5 : 0.32), .white.opacity(0.06)],
+                    startPoint: .top, endPoint: .bottom), lineWidth: 0.8))
+                .contentShape(Capsule())
+                .scaleEffect(configuration.isPressed ? 0.94 : (hover ? 1.05 : 1))
+                .animation(.spring(response: 0.25, dampingFraction: 0.6), value: hover)
+                .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
+                .onHover { hover = $0 }
+        }
+    }
+}
+
+/// Simge düğmeleri: üzerine gelince büyür, basınca küçülür.
+struct HoverIconStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HoverBody(configuration: configuration)
+    }
+
+    private struct HoverBody: View {
+        let configuration: Configuration
+        @State private var hover = false
+
+        var body: some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.85 : (hover ? 1.18 : 1))
+                .brightness(hover ? 0.15 : 0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.55), value: hover)
+                .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
+                .onHover { hover = $0 }
+        }
     }
 }

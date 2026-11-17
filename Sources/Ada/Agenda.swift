@@ -220,6 +220,7 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
     static let shared = WeatherService()
 
     @Published var current: WeatherNow?
+    @Published var hourly: [HourForecast] = []
     @Published var denied = false
 
     private let manager = CLLocationManager()
@@ -267,7 +268,7 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
     private func fetch(lat: Double, lon: Double) {
         // Konum yaklaşık 1 km hassasiyete yuvarlanarak gönderilir.
         let la = String(format: "%.2f", lat), lo = String(format: "%.2f", lon)
-        let s = "https://api.open-meteo.com/v1/forecast?latitude=\(la)&longitude=\(lo)&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1"
+        let s = "https://api.open-meteo.com/v1/forecast?latitude=\(la)&longitude=\(lo)&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&hourly=temperature_2m,weather_code,precipitation_probability,is_day&timezone=auto&forecast_days=2"
         guard let url = URL(string: s) else { return }
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data,
@@ -279,10 +280,28 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
             let lo = (daily?["temperature_2m_min"] as? [Double])?.first
             let now = WeatherNow(temperature: temp, code: cur["weather_code"] as? Int ?? 3,
                                  isDay: (cur["is_day"] as? Int ?? 1) == 1, high: hi, low: lo, place: "")
+            // Saatlik tahmin: şu andan sonraki saatler
+            var hours: [HourForecast] = []
+            if let h = json["hourly"] as? [String: Any], let times = h["time"] as? [String],
+               let temps = h["temperature_2m"] as? [Double], let codes = h["weather_code"] as? [Int] {
+                let rains = h["precipitation_probability"] as? [Int] ?? []
+                let days = h["is_day"] as? [Int] ?? []
+                let f = DateFormatter()
+                f.locale = Locale(identifier: "en_US_POSIX")
+                f.dateFormat = "yyyy-MM-dd'T'HH:mm"
+                let nowDate = Date()
+                for i in 0..<min(times.count, temps.count, codes.count) {
+                    guard let d = f.date(from: times[i]), d > nowDate else { continue }
+                    hours.append(HourForecast(time: d, temperature: temps[i], code: codes[i],
+                                              isDay: i < days.count ? days[i] == 1 : true, rain: i < rains.count ? rains[i] : 0))
+                    if hours.count >= 8 { break }
+                }
+            }
             DispatchQueue.main.async {
                 var n = now
                 n.place = self.place
                 self.current = n
+                self.hourly = hours
             }
         }.resume()
     }
@@ -294,13 +313,23 @@ struct AgendaColumn: View {
     @ObservedObject var prefs = Prefs.shared
     @ObservedObject var agenda = AgendaService.shared
     @ObservedObject var weather = WeatherService.shared
+    // ADA_TEST_FORECAST: geliştirme sırasında tahmin şeridini açık başlatır.
+    @State private var showForecast = ProcessInfo.processInfo.environment["ADA_TEST_FORECAST"] != nil
 
     var body: some View {
         let tall = prefs.expandedHeight >= 290
         VStack(alignment: .leading, spacing: tall ? 10 : 7) {
-            if prefs.isOn(.weather) { weatherRow }
+            if prefs.isOn(.weather) {
+                weatherRow
+                    .contentShape(Rectangle())
+                    .onTapGesture { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { showForecast.toggle() } }
+                    .help(L("Saatlik tahmin için tıklayın"))
+            }
             if prefs.isOn(.ticker) { TickerRow() }
-            if prefs.isOn(.calendar) {
+            if showForecast, prefs.isOn(.weather) {
+                ForecastStrip().transition(.blurReplace)
+            }
+            if prefs.isOn(.calendar), !showForecast {
                 VStack(alignment: .leading, spacing: 5) {
                     SectionTitle(text: L("Yaklaşan"))
                     if agenda.eventsDenied {
@@ -325,7 +354,7 @@ struct AgendaColumn: View {
                     }
                 }
             }
-            if prefs.isOn(.reminders) {
+            if prefs.isOn(.reminders), !showForecast {
                 VStack(alignment: .leading, spacing: 4) {
                     SectionTitle(text: L("Anımsatıcılar"))
                     if agenda.remindersDenied {

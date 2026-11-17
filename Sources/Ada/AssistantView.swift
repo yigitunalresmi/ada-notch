@@ -22,6 +22,7 @@ struct AssistantView: View {
             VStack(spacing: 8) {
                 conversation
                 if let p = engine.pending { confirmCard(p) }
+                SelectionCard()
                 inputBar
             }
             .onAppear {
@@ -83,12 +84,15 @@ struct AssistantView: View {
         case .user:
             Text(item.text)
                 .font(.system(size: 12.5))
+                .lineLimit(5)
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Prefs.shared.accentColor.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .textSelection(.enabled)
         case .assistant:
-            Text(markdown(item.text))
+            TypewriterText(text: item.text,
+                           animate: !Prefs.shared.reduceMotion && !engine.revealed.contains(item.id) && item.id == engine.items.last(where: { $0.role == .assistant })?.id,
+                           onFinished: { engine.revealed.insert(item.id) })
                 .font(.system(size: 12.5))
                 .lineSpacing(2)
                 .frame(maxWidth: 560, alignment: .leading)

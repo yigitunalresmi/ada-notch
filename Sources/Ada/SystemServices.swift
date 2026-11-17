@@ -48,6 +48,15 @@ final class BatteryService: ObservableObject {
         }
     }
 
+    /// "Kalan süre: 3 sa 20 dk" gibi; bilinmiyorsa boş.
+    var timeRemaining: String {
+        let t = IOPSGetTimeRemainingEstimate()
+        if t == -2 { return L("Güç adaptörüne bağlı") }
+        guard t > 0 else { return L("Kalan süre hesaplanıyor") }
+        let m = Int(t / 60)
+        return Lf("Kalan süre: %@ sa %@ dk", "\(m / 60)", "\(m % 60)")
+    }
+
     /// Takılı güç adaptörünün gücü, ör. " · 96W".
     private static func adapterWatts() -> String {
         guard let d = IOPSCopyExternalPowerAdapterDetails()?.takeRetainedValue() as? [String: Any],
@@ -334,6 +343,8 @@ final class StatsService: ObservableObject {
     static let shared = StatsService()
 
     @Published var cpu: Double = 0
+    /// Son ölçümler (mini grafik için).
+    @Published var cpuHistory: [Double] = []
     @Published var memUsed: Double = 0
     @Published var memTotal: Double = Double(ProcessInfo.processInfo.physicalMemory)
     @Published var netDown: Double = 0
@@ -369,6 +380,8 @@ final class StatsService: ObservableObject {
             let busy = user + sys + nice, total = busy + idle
             if let last = lastTicks, total > last.total {
                 cpu = (busy - last.busy) / (total - last.total)
+                cpuHistory.append(cpu)
+                if cpuHistory.count > 30 { cpuHistory.removeFirst(cpuHistory.count - 30) }
             }
             lastTicks = (busy, total)
         }

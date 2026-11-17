@@ -232,6 +232,11 @@ struct MusicCard: View {
                 HStack(spacing: 14) {
                     ArtworkView(image: music.artwork, size: side, radius: 16)
                         .shadow(color: .black.opacity(0.5), radius: 8, y: 4)
+                        .scaleEffect(music.isPlaying ? 1 : 0.92)
+                        .id(music.title + music.artist + (music.artwork == nil ? "0" : "1"))
+                        .transition(.blurReplace)
+                        .animation(.spring(response: 0.45, dampingFraction: 0.7), value: music.isPlaying)
+                        .animation(.easeInOut(duration: 0.35), value: music.title)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(music.title).font(.system(size: 14, weight: .semibold)).lineLimit(1)
                         Text(music.artist).font(.system(size: 12)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
@@ -288,9 +293,11 @@ struct MusicCard: View {
 
     private func control(_ icon: String, size: CGFloat, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(.system(size: size)).frame(width: 28, height: 26).contentShape(Rectangle())
+            Image(systemName: icon).font(.system(size: size))
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 28, height: 26).contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(HoverIconStyle())
     }
 }
 

@@ -20,7 +20,7 @@ struct ModulesSettings: View {
     private let groups: [(String, [ModuleID])] = [
         (L("Ana sekme"), [.music, .lyrics, .calendar, .reminders, .weather, .ticker]),
         (L("Canlı bildirimler ve ekran"), [.battery, .bluetooth, .hud, .xdr, .privacy, .network, .downloads]),
-        (L("Araçlar"), [.timer, .clipboard, .notes, .stats, .shelf, .launcher, .mirror]),
+        (L("Araçlar"), [.timer, .clipboard, .notes, .stats, .shelf, .screenshots, .launcher, .mirror]),
         (L("Asistan"), [.assistant]),
         (L("Gelişmiş (ek izin gerektirir)"), [.focus, .notifications, .visualizer, .lockscreen]),
     ]
@@ -219,6 +219,7 @@ struct GeneralSettings: View {
                 }
                 Toggle(L("Son açık sekmeyi hatırla"), isOn: $prefs.rememberTab)
                 Toggle(L("Açılırken dokunsal geri bildirim"), isOn: $prefs.haptics)
+                Toggle(L("Animasyonları azalt (konfeti, yazı efekti, ışıltı)"), isOn: $prefs.reduceMotion)
             }
             Section(L("Modül ayarları")) {
                 Picker(L("Sıcaklık birimi"), selection: $prefs.fahrenheit) {
@@ -288,6 +289,7 @@ struct GeneralSettings: View {
             }
             Section(L("Kısayol")) {
                 Toggle(L("⌥ Boşluk ile asistanı aç"), isOn: $prefs.hotkey)
+                Toggle(L("⌥⇧ Boşluk ile seçili metni asistana gönder"), isOn: $prefs.selectionHotkey)
             }
             Section(L("Başlangıç")) {
                 Toggle(L("Oturum açıldığında Ada'yı başlat"), isOn: Binding(
