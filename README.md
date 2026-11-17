@@ -107,6 +107,8 @@ Ada yeni sürümleri kendisi denetler (açılışta ve altı saatte bir) ve çen
 
 Otomatik kurulum isteğe bağlıdır ve kapalı gelir.
 
+Tüm sürümler ve değişiklik notları: [Releases](https://github.com/yigitunalresmi/ada-notch/releases).
+
 Hazır sürümler yerel (ad-hoc) imzalıdır. Bu yüzden macOS, her güncellemeden sonra Erişilebilirlik gibi bazı izinleri
 yeniden isteyebilir.
 
