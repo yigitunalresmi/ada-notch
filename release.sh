@@ -22,8 +22,9 @@ LOG=$(mktemp)
 if ! swift build -c release --arch arm64 --arch x86_64 > "$LOG" 2>&1; then
   grep -E "error" "$LOG" | head -20; echo "Derleme başarısız / Build failed"; exit 1
 fi
-BIN=".build/apple/Products/Release/Ada"
-[ -f "$BIN" ] || { echo "Derlenen dosya bulunamadı"; exit 1; }
+# Çıktı klasörü Swift sürümüne göre değişir; derleyiciye sor.
+BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path 2>/dev/null | tail -1)/Ada"
+[ -f "$BIN" ] || { echo "Derlenen dosya bulunamadı: $BIN"; exit 1; }
 
 rm -rf dist && mkdir -p dist/Ada.app/Contents/MacOS dist/Ada.app/Contents/Resources
 APP="dist/Ada.app"
