@@ -64,11 +64,11 @@ final class BatteryService: ObservableObject {
             if primed, ac != wasAC {
                 NotchModel.shared.showHUD(HUDInfo(
                     icon: ac ? "bolt.fill" : "battery.75",
-                    title: ac ? "Şarj oluyor · %\(cap)" : "Pilde · %\(cap)",
+                    title: ac ? Lf("Şarj oluyor · %%%@", "\(cap)") : Lf("Pilde · %%%@", "\(cap)"),
                     tint: ac ? .green : .white), seconds: 2.6)
             }
             if primed, !ac, cap == 20 || cap == 10 {
-                NotchModel.shared.showHUD(HUDInfo(icon: "battery.25", title: "Pil azaldı · %\(cap)", tint: .red), seconds: 3)
+                NotchModel.shared.showHUD(HUDInfo(icon: "battery.25", title: Lf("Pil azaldı · %%%@", "\(cap)"), tint: .red), seconds: 3)
             }
             primed = true
             return
@@ -97,18 +97,18 @@ final class BluetoothService: NSObject {
         device.register(forDisconnectNotification: self, selector: #selector(disconnected(_:device:)))
         // Kayıt anında zaten bağlı olan cihazlar için bildirim gösterme.
         guard Date().timeIntervalSince(startedAt) > 3 else { return }
-        let name = device.name ?? "Bluetooth cihazı"
+        let name = device.name ?? L("Bluetooth cihazı")
         DispatchQueue.main.async {
-            NotchModel.shared.showHUD(HUDInfo(icon: Self.icon(for: name), title: "\(name) bağlandı", tint: .blue), seconds: 2.8)
+            NotchModel.shared.showHUD(HUDInfo(icon: Self.icon(for: name), title: Lf("%@ bağlandı", "\(name)"), tint: .blue), seconds: 2.8)
         }
     }
 
     @objc private func disconnected(_ n: IOBluetoothUserNotification, device: IOBluetoothDevice) {
         n.unregister()
         guard note != nil else { return }
-        let name = device.name ?? "Bluetooth cihazı"
+        let name = device.name ?? L("Bluetooth cihazı")
         DispatchQueue.main.async {
-            NotchModel.shared.showHUD(HUDInfo(icon: Self.icon(for: name), title: "\(name) ayrıldı", tint: .gray), seconds: 2.2)
+            NotchModel.shared.showHUD(HUDInfo(icon: Self.icon(for: name), title: Lf("%@ ayrıldı", "\(name)"), tint: .gray), seconds: 2.2)
         }
     }
 
@@ -286,7 +286,7 @@ final class HUDService {
     func showVolume(_ v: Float, muted isMuted: Bool) {
         let muted = isMuted || v < 0.005
         let icon = muted ? "speaker.slash.fill" : (v < 0.34 ? "speaker.wave.1.fill" : (v < 0.67 ? "speaker.wave.2.fill" : "speaker.wave.3.fill"))
-        NotchModel.shared.showHUD(HUDInfo(icon: icon, title: "Ses", value: muted ? 0 : Double(v)), seconds: 1.6)
+        NotchModel.shared.showHUD(HUDInfo(icon: icon, title: L("Ses"), value: muted ? 0 : Double(v)), seconds: 1.6)
     }
 
     private func pollBrightness() {
@@ -300,7 +300,7 @@ final class HUDService {
 
     func showBrightness(_ b: Float) {
         lastBrightness = b
-        NotchModel.shared.showHUD(HUDInfo(icon: "sun.max.fill", title: "Parlaklık", value: Double(b), tint: .yellow), seconds: 1.6)
+        NotchModel.shared.showHUD(HUDInfo(icon: "sun.max.fill", title: L("Parlaklık"), value: Double(b), tint: .yellow), seconds: 1.6)
     }
 
     func showBoost() {

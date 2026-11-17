@@ -11,9 +11,9 @@ struct AssistantView: View {
         if !engine.hasKey {
             VStack(spacing: 10) {
                 Image(systemName: "key.fill").font(.system(size: 22)).foregroundStyle(.white.opacity(0.4))
-                Text("Asistanı kullanmak için Anthropic API anahtarınızı ekleyin.")
+                Text(L("Asistanı kullanmak için Anthropic API anahtarınızı ekleyin."))
                     .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
-                Button("Ayarları Aç") { AppDelegate.showSettings() }
+                Button(L("Ayarları Aç")) { AppDelegate.showSettings() }
                     .buttonStyle(PillButtonStyle(tint: Prefs.shared.accentColor.opacity(0.8)))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -46,11 +46,11 @@ struct AssistantView: View {
                 VStack(alignment: .leading, spacing: 7) {
                     if engine.items.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Merhaba, ben Ada.").font(.system(size: 14, weight: .semibold))
-                            Text("Şunları deneyebilirsiniz:").font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
+                            Text(L("Merhaba, ben Ada.")).font(.system(size: 14, weight: .semibold))
+                            Text(L("Şunları deneyebilirsiniz:")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 6) {
-                                    ForEach(["Bugün takvimimde ne var?", "Bu pencereyi sola yasla", "Seçili metni özetle", "25 dakikalık zamanlayıcı kur", "Sesi yüzde 30 yap ve karanlık moda geç", "Yarın 10'a toplantı ekle"], id: \.self) { s in
+                                    ForEach([L("Bugün takvimimde ne var?"), L("Bu pencereyi sola yasla"), L("Seçili metni özetle"), L("25 dakikalık zamanlayıcı kur"), L("Sesi yüzde 30 yap ve karanlık moda geç"), L("Yarın 10'a toplantı ekle")], id: \.self) { s in
                                         Button(s) { engine.send(s) }.buttonStyle(PillButtonStyle()).fixedSize()
                                     }
                                 }
@@ -121,8 +121,8 @@ struct AssistantView: View {
                 .frame(maxHeight: 54)
             }
             VStack(spacing: 5) {
-                Button("Onayla") { engine.resolve(true) }.buttonStyle(PillButtonStyle(tint: .green.opacity(0.7)))
-                Button("Reddet") { engine.resolve(false) }.buttonStyle(PillButtonStyle(tint: .red.opacity(0.6)))
+                Button(L("Onayla")) { engine.resolve(true) }.buttonStyle(PillButtonStyle(tint: .green.opacity(0.7)))
+                Button(L("Reddet")) { engine.resolve(false) }.buttonStyle(PillButtonStyle(tint: .red.opacity(0.6)))
             }
         }
         .padding(9)
@@ -145,7 +145,7 @@ struct AssistantView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(speech.listening ? "Dinlemeyi bitir ve gönder" : "Sesle sor")
+            .help(speech.listening ? L("Dinlemeyi bitir ve gönder") : L("Sesle sor"))
 
             Button { speech.setConversation(!speech.conversation) } label: {
                 Image(systemName: speech.conversation ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right")
@@ -155,9 +155,9 @@ struct AssistantView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(speech.conversation ? "Sesli sohbeti bitir" : "Sesli sohbet: konuşun, susunca gönderilir, yanıt sesli okunur")
+            .help(speech.conversation ? L("Sesli sohbeti bitir") : L("Sesli sohbet: konuşun, susunca gönderilir, yanıt sesli okunur"))
 
-            TextField(speech.listening ? "Dinliyorum…" : (speech.error ?? "Ada'ya sorun ya da bir şey yaptırın"), text: $draft)
+            TextField(speech.listening ? L("Dinliyorum…") : (speech.error ?? L("Ada'ya sorun ya da bir şey yaptırın")), text: $draft)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .focused($focused)
@@ -168,13 +168,13 @@ struct AssistantView: View {
                 Button { engine.stop() } label: {
                     Image(systemName: "stop.circle.fill").font(.system(size: 17)).foregroundStyle(.white.opacity(0.8))
                 }
-                .buttonStyle(.plain).help("Durdur")
+                .buttonStyle(.plain).help(L("Durdur"))
             } else {
                 if !engine.items.isEmpty {
                     Button { engine.reset(); SpeechService.shared.stopSpeaking() } label: {
                         Image(systemName: "trash").font(.system(size: 12)).foregroundStyle(.white.opacity(0.45))
                     }
-                    .buttonStyle(.plain).help("Sohbeti temizle")
+                    .buttonStyle(.plain).help(L("Sohbeti temizle"))
                 }
                 Button(action: submit) {
                     Image(systemName: "arrow.up.circle.fill").font(.system(size: 19))

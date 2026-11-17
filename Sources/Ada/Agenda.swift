@@ -17,7 +17,7 @@ struct AgendaEvent: Identifiable {
     /// "12 dk" / "şimdi"
     var countdown: String {
         let m = Int((start.timeIntervalSinceNow / 60).rounded(.up))
-        return m <= 0 ? "şimdi" : "\(m) dk"
+        return m <= 0 ? L("şimdi") : Lf("%@ dk", "\(m)")
     }
 }
 
@@ -92,7 +92,7 @@ final class AgendaService: ObservableObject {
             .filter { $0.endDate > now }
             .sorted { $0.startDate < $1.startDate }
             .map {
-                AgendaEvent(id: $0.eventIdentifier ?? UUID().uuidString, title: $0.title ?? "(Başlıksız)",
+                AgendaEvent(id: $0.eventIdentifier ?? UUID().uuidString, title: $0.title ?? L("(Başlıksız)"),
                             start: $0.startDate, end: $0.endDate, allDay: $0.isAllDay,
                             color: Color(nsColor: $0.calendar.color), url: Self.meetingURL($0))
             }
@@ -201,17 +201,17 @@ struct WeatherNow {
 
     var summary: String {
         switch code {
-        case 0: return "Açık"
-        case 1: return "Az bulutlu"
-        case 2: return "Parçalı bulutlu"
-        case 3: return "Kapalı"
-        case 45, 48: return "Sisli"
-        case 51...57: return "Çisenti"
-        case 61...67: return "Yağmurlu"
-        case 71...77, 85, 86: return "Karlı"
-        case 80...82: return "Sağanak"
-        case 95...99: return "Gök gürültülü fırtına"
-        default: return "Bulutlu"
+        case 0: return L("Açık")
+        case 1: return L("Az bulutlu")
+        case 2: return L("Parçalı bulutlu")
+        case 3: return L("Kapalı")
+        case 45, 48: return L("Sisli")
+        case 51...57: return L("Çisenti")
+        case 61...67: return L("Yağmurlu")
+        case 71...77, 85, 86: return L("Karlı")
+        case 80...82: return L("Sağanak")
+        case 95...99: return L("Gök gürültülü fırtına")
+        default: return L("Bulutlu")
         }
     }
 }
@@ -301,11 +301,11 @@ struct AgendaColumn: View {
             if prefs.isOn(.weather) { weatherRow }
             if prefs.isOn(.calendar) {
                 VStack(alignment: .leading, spacing: 5) {
-                    SectionTitle(text: "Yaklaşan")
+                    SectionTitle(text: L("Yaklaşan"))
                     if agenda.eventsDenied {
-                        hint("Takvim izni verilmedi")
+                        hint(L("Takvim izni verilmedi"))
                     } else if agenda.events.isEmpty {
-                        hint("Yaklaşan etkinlik yok")
+                        hint(L("Yaklaşan etkinlik yok"))
                     } else {
                         ForEach(agenda.events.prefix(prefs.isOn(.reminders) ? (tall ? 3 : 1) : (tall ? 5 : 3))) { e in
                             HStack(spacing: 7) {
@@ -316,7 +316,7 @@ struct AgendaColumn: View {
                                 }
                                 if let url = e.url {
                                     Spacer(minLength: 4)
-                                    Button("Katıl") { NSWorkspace.shared.open(url) }
+                                    Button(L("Katıl")) { NSWorkspace.shared.open(url) }
                                         .buttonStyle(PillButtonStyle(tint: .green.opacity(0.65)))
                                 }
                             }
@@ -326,11 +326,11 @@ struct AgendaColumn: View {
             }
             if prefs.isOn(.reminders) {
                 VStack(alignment: .leading, spacing: 4) {
-                    SectionTitle(text: "Anımsatıcılar")
+                    SectionTitle(text: L("Anımsatıcılar"))
                     if agenda.remindersDenied {
-                        hint("Anımsatıcı izni verilmedi")
+                        hint(L("Anımsatıcı izni verilmedi"))
                     } else if agenda.reminders.isEmpty {
-                        hint("Bekleyen anımsatıcı yok")
+                        hint(L("Bekleyen anımsatıcı yok"))
                     } else {
                         ForEach(agenda.reminders.prefix(prefs.isOn(.calendar) ? (tall ? 2 : 1) : (tall ? 5 : 3))) { r in
                             HStack(spacing: 6) {
@@ -366,25 +366,25 @@ struct AgendaColumn: View {
                 }
             }
         } else {
-            hint(weather.denied ? "Hava durumu için konum izni verilmedi" : "Hava durumu yükleniyor…")
+            hint(weather.denied ? L("Hava durumu için konum izni verilmedi") : L("Hava durumu yükleniyor…"))
         }
     }
 
     private func when(_ e: AgendaEvent) -> String {
         let cal = Calendar.current
         let day: String
-        if cal.isDateInToday(e.start) { day = "Bugün" }
-        else if cal.isDateInTomorrow(e.start) { day = "Yarın" }
+        if cal.isDateInToday(e.start) { day = L("Bugün") }
+        else if cal.isDateInTomorrow(e.start) { day = L("Yarın") }
         else {
             let f = DateFormatter()
-            f.locale = Locale(identifier: "tr_TR")
+            f.locale = appLocale
             f.dateFormat = "EEEE"
             day = f.string(from: e.start)
         }
-        if e.allDay { return "\(day) · Tüm gün" }
+        if e.allDay { return Lf("%@ · Tüm gün", "\(day)") }
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
-        if e.start <= Date() { return "Şimdi · \(f.string(from: e.end))'e kadar" }
+        if e.start <= Date() { return Lf("Şimdi · %@'e kadar", "\(f.string(from: e.end))") }
         return "\(day) · \(f.string(from: e.start))–\(f.string(from: e.end))"
     }
 }

@@ -123,7 +123,7 @@ enum QuickAction {
             let hex = String(format: "#%02X%02X%02X", Int((c.redComponent * 255).rounded()),
                              Int((c.greenComponent * 255).rounded()), Int((c.blueComponent * 255).rounded()))
             ClipboardService.shared.copy(hex)
-            NotchModel.shared.showHUD(HUDInfo(icon: "eyedropper.halffull", title: "\(hex) kopyalandı", tint: Color(nsColor: c)), seconds: 2.6)
+            NotchModel.shared.showHUD(HUDInfo(icon: "eyedropper.halffull", title: Lf("%@ kopyalandı", "\(hex)"), tint: Color(nsColor: c)), seconds: 2.6)
         }
     }
 
@@ -140,15 +140,15 @@ struct QuickActionsRow: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            action("moon.fill", "Görünüm") { QuickAction.toggleDarkMode() }
-            action(awake.active ? "cup.and.saucer.fill" : "cup.and.saucer", "Uyanık", on: awake.active) { awake.toggle() }
-            action("camera.viewfinder", "Alıntı") { QuickAction.screenshotSelection() }
-            action(muted ? "speaker.slash.fill" : "speaker.wave.2.fill", "Sessiz", on: muted) {
+            action("moon.fill", L("Görünüm")) { QuickAction.toggleDarkMode() }
+            action(awake.active ? "cup.and.saucer.fill" : "cup.and.saucer", L("Uyanık"), on: awake.active) { awake.toggle() }
+            action("camera.viewfinder", L("Alıntı")) { QuickAction.screenshotSelection() }
+            action(muted ? "speaker.slash.fill" : "speaker.wave.2.fill", L("Sessiz"), on: muted) {
                 QuickAction.toggleMute()
                 muted = Audio.muted()
             }
-            action("eyedropper", "Renk") { QuickAction.pickColor() }
-            action("display", "Uyut") { QuickAction.sleepDisplay() }
+            action("eyedropper", L("Renk")) { QuickAction.pickColor() }
+            action("display", L("Uyut")) { QuickAction.sleepDisplay() }
             Menu {
                 let current = Audio.defaultDevice()
                 ForEach(Audio.outputDevices(), id: \.id) { dev in
@@ -157,7 +157,7 @@ struct QuickActionsRow: View {
                     }
                 }
             } label: {
-                Label("Çıkış", systemImage: "hifispeaker.fill").labelStyle(.titleAndIcon)
+                Label(L("Çıkış"), systemImage: "hifispeaker.fill").labelStyle(.titleAndIcon)
             }
             .menuStyle(.button)
             .buttonStyle(PillButtonStyle())
@@ -184,12 +184,12 @@ struct LauncherView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                SectionTitle(text: "Uygulamalar")
+                SectionTitle(text: L("Uygulamalar"))
                 Spacer()
-                Button { addApp() } label: { Label("Ekle", systemImage: "plus") }.buttonStyle(PillButtonStyle())
+                Button { addApp() } label: { Label(L("Ekle"), systemImage: "plus") }.buttonStyle(PillButtonStyle())
             }
             if prefs.pinnedApps.isEmpty {
-                EmptyHint(icon: "square.grid.3x3", text: "Sık kullandığınız uygulamaları \"Ekle\" ile sabitleyin.")
+                EmptyHint(icon: "square.grid.3x3", text: L("Sık kullandığınız uygulamaları \"Ekle\" ile sabitleyin."))
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
@@ -208,7 +208,7 @@ struct LauncherView: View {
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
-                                Button("Başlatıcıdan Kaldır") { prefs.pinnedApps.removeAll { $0 == path } }
+                                Button(L("Başlatıcıdan Kaldır")) { prefs.pinnedApps.removeAll { $0 == path } }
                             }
                         }
                     }
@@ -225,7 +225,7 @@ struct LauncherView: View {
         panel.allowedContentTypes = [.application]
         panel.allowsMultipleSelection = true
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.prompt = "Sabitle"
+        panel.prompt = L("Sabitle")
         if panel.runModal() == .OK {
             for url in panel.urls where !prefs.pinnedApps.contains(url.path) { prefs.pinnedApps.append(url.path) }
         }

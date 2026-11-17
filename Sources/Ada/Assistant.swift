@@ -48,14 +48,14 @@ struct ClaudeError: LocalizedError {
 
 enum ClaudeClient {
     static let models: [(id: String, name: String)] = [
-        ("claude-opus-5-5", "Claude Opus 5.5 (önerilen)"),
-        ("claude-sonnet-5-5", "Claude Sonnet 5.5 (daha hızlı, daha ucuz)"),
-        ("claude-haiku-5-5", "Claude Haiku 5.5 (en hızlı)"),
+        ("claude-opus-5-5", L("Claude Opus 5.5 (önerilen)")),
+        ("claude-sonnet-5-5", L("Claude Sonnet 5.5 (daha hızlı, daha ucuz)")),
+        ("claude-haiku-5-5", L("Claude Haiku 5.5 (en hızlı)")),
     ]
 
     static func send(messages: [[String: Any]], system: String, tools: [[String: Any]]) async throws -> [String: Any] {
         guard let key = Keychain.get(), !key.isEmpty else {
-            throw ClaudeError(status: 0, message: "API anahtarı girilmemiş. Ayarlar › Asistan bölümünden ekleyin.")
+            throw ClaudeError(status: 0, message: L("API anahtarı girilmemiş. Ayarlar › Asistan bölümünden ekleyin."))
         }
         let model = Prefs.shared.model
         var body: [String: Any] = [
@@ -89,7 +89,7 @@ enum ClaudeClient {
         if let beta { req.setValue(beta, forHTTPHeaderField: "anthropic-beta") }
         req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
 
-        var lastError: Error = ClaudeError(status: 0, message: "Bağlantı kurulamadı.")
+        var lastError: Error = ClaudeError(status: 0, message: L("Bağlantı kurulamadı."))
         for attempt in 0..<3 {
             if attempt > 0 { try await Task.sleep(nanoseconds: UInt64(attempt) * 1_500_000_000) }
             do {
@@ -100,10 +100,10 @@ enum ClaudeClient {
                 let detail = ((json["error"] as? [String: Any])?["message"] as? String) ?? "HTTP \(status)"
                 let err: ClaudeError
                 switch status {
-                case 401: err = ClaudeError(status: status, message: "API anahtarı geçersiz. Ayarlar › Asistan bölümünden kontrol edin.")
-                case 403: err = ClaudeError(status: status, message: "Bu anahtarın bu modele erişim izni yok: \(detail)")
-                case 429: err = ClaudeError(status: status, message: "İstek sınırına ulaşıldı, biraz sonra tekrar deneyin.")
-                case 500...599: err = ClaudeError(status: status, message: "Claude şu an yoğun (\(status)). Biraz sonra tekrar deneyin.")
+                case 401: err = ClaudeError(status: status, message: L("API anahtarı geçersiz. Ayarlar › Asistan bölümünden kontrol edin."))
+                case 403: err = ClaudeError(status: status, message: Lf("Bu anahtarın bu modele erişim izni yok: %@", "\(detail)"))
+                case 429: err = ClaudeError(status: status, message: L("İstek sınırına ulaşıldı, biraz sonra tekrar deneyin."))
+                case 500...599: err = ClaudeError(status: status, message: Lf("Claude şu an yoğun (%@). Biraz sonra tekrar deneyin.", "\(status)"))
                 default: err = ClaudeError(status: status, message: detail)
                 }
                 lastError = err
@@ -115,7 +115,7 @@ enum ClaudeClient {
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
-                lastError = ClaudeError(status: 0, message: "Ağ hatası: \(error.localizedDescription)")
+                lastError = ClaudeError(status: 0, message: Lf("Ağ hatası: %@", "\(error.localizedDescription)"))
             }
         }
         throw lastError
@@ -191,7 +191,7 @@ final class AssistantEngine: ObservableObject {
         let ctx = "\n\n<context>now: \(f.string(from: Date())), timezone: \(TimeZone.current.identifier)</context>"
         history.append(["role": "user", "content": text + ctx])
         busy = true
-        status = "Düşünüyor…"
+        status = L("Düşünüyor…")
         task = Task { @MainActor in
             await self.run()
             self.busy = false
@@ -258,25 +258,25 @@ final class AssistantEngine: ObservableObject {
                     results.append(r)
                 }
                 history.append(["role": "user", "content": results])
-                status = "Düşünüyor…"
+                status = L("Düşünüyor…")
                 continue
             case "pause_turn":
                 continue
             case "refusal":
-                items.append(ChatItem(role: .error, text: "Claude bu isteği yanıtlamayı reddetti."))
+                items.append(ChatItem(role: .error, text: L("Claude bu isteği yanıtlamayı reddetti.")))
                 // Reddedilen dönüşü geçmişten çıkar ki sohbet devam edebilsin.
                 if !content.isEmpty { history.removeLast() }
                 repairHistory()
                 return
             case "max_tokens":
-                items.append(ChatItem(role: .error, text: "Yanıt uzunluk sınırına takıldı."))
+                items.append(ChatItem(role: .error, text: L("Yanıt uzunluk sınırına takıldı.")))
                 return
             default:
-                if text.isEmpty { items.append(ChatItem(role: .assistant, text: "Tamam.")) }
+                if text.isEmpty { items.append(ChatItem(role: .assistant, text: L("Tamam."))) }
                 return
             }
         }
-        items.append(ChatItem(role: .error, text: "Çok fazla adım gerekti, durduruldu."))
+        items.append(ChatItem(role: .error, text: L("Çok fazla adım gerekti, durduruldu.")))
     }
 
     /// Geçmişin sonu yanıtsız bir kullanıcı mesajı ise onu çıkarır; aksi halde sonraki istek geçersiz olur.
@@ -376,12 +376,12 @@ final class SpeechService: NSObject, ObservableObject, AVSpeechSynthesizerDelega
         SFSpeechRecognizer.requestAuthorization { status in
             DispatchQueue.main.async {
                 guard status == .authorized else {
-                    self.error = "Konuşma tanıma izni verilmedi."
+                    self.error = L("Konuşma tanıma izni verilmedi.")
                     return
                 }
                 AVCaptureDevice.requestAccess(for: .audio) { ok in
                     DispatchQueue.main.async {
-                        guard ok else { self.error = "Mikrofon izni verilmedi."; return }
+                        guard ok else { self.error = L("Mikrofon izni verilmedi."); return }
                         self.begin()
                     }
                 }
@@ -391,7 +391,7 @@ final class SpeechService: NSObject, ObservableObject, AVSpeechSynthesizerDelega
 
     private func begin() {
         guard let rec = SFSpeechRecognizer(locale: Locale(identifier: Prefs.shared.speechLocale)), rec.isAvailable else {
-            error = "Bu dil için konuşma tanıma kullanılamıyor."
+            error = L("Bu dil için konuşma tanıma kullanılamıyor.")
             return
         }
         let req = SFSpeechAudioBufferRecognitionRequest()
@@ -399,12 +399,12 @@ final class SpeechService: NSObject, ObservableObject, AVSpeechSynthesizerDelega
         request = req
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
-        guard format.sampleRate > 0 else { error = "Mikrofon bulunamadı."; return }
+        guard format.sampleRate > 0 else { error = L("Mikrofon bulunamadı."); return }
         input.removeTap(onBus: 0)
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in req.append(buffer) }
         engine.prepare()
         do { try engine.start() } catch {
-            self.error = "Mikrofon başlatılamadı."
+            self.error = L("Mikrofon başlatılamadı.")
             return
         }
         transcript = ""

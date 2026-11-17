@@ -41,16 +41,16 @@ struct ShelfView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                SectionTitle(text: "Raf · \(shelf.items.count) dosya")
+                SectionTitle(text: Lf("Raf · %@ dosya", "\(shelf.items.count)"))
                 Spacer()
                 if !shelf.items.isEmpty {
                     Button { shelf.airDrop() } label: { Label("AirDrop", systemImage: "dot.radiowaves.left.and.right") }
                         .buttonStyle(PillButtonStyle(tint: .blue.opacity(0.7)))
-                    Button("Temizle") { shelf.clear() }.buttonStyle(PillButtonStyle())
+                    Button(L("Temizle")) { shelf.clear() }.buttonStyle(PillButtonStyle())
                 }
             }
             if shelf.items.isEmpty {
-                EmptyHint(icon: "tray.and.arrow.down", text: "Dosyaları çentiğe sürükleyip bırakın.\nSonra buradan istediğiniz yere taşıyabilirsiniz.")
+                EmptyHint(icon: "tray.and.arrow.down", text: L("Dosyaları çentiğe sürükleyip bırakın.\nSonra buradan istediğiniz yere taşıyabilirsiniz."))
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
@@ -67,9 +67,9 @@ struct ShelfView: View {
                             .onDrag { NSItemProvider(object: url as NSURL) }
                             .onTapGesture(count: 2) { NSWorkspace.shared.open(url) }
                             .contextMenu {
-                                Button("Aç") { NSWorkspace.shared.open(url) }
-                                Button("Finder'da Göster") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-                                Button("Raftan Kaldır") { shelf.remove(url) }
+                                Button(L("Aç")) { NSWorkspace.shared.open(url) }
+                                Button(L("Finder'da Göster")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                                Button(L("Raftan Kaldır")) { shelf.remove(url) }
                             }
                         }
                     }
@@ -137,7 +137,7 @@ final class CountdownService: ObservableObject {
 
     /// Odak ve mola sürelerini sırayla, durdurulana kadar tekrarlar.
     func startPomodoro() {
-        begin(minutes: Prefs.shared.pomodoroWork, label: "Odak")
+        begin(minutes: Prefs.shared.pomodoroWork, label: L("Odak"))
         pomodoro = true
         working = true
     }
@@ -173,11 +173,11 @@ final class CountdownService: ObservableObject {
             if pomodoro {
                 working.toggle()
                 NotchModel.shared.showHUD(HUDInfo(icon: working ? "brain.head.profile" : "cup.and.saucer.fill",
-                                                  title: working ? "Odak zamanı" : "Mola zamanı", tint: .orange), seconds: 5)
-                begin(minutes: working ? Prefs.shared.pomodoroWork : Prefs.shared.pomodoroBreak, label: working ? "Odak" : "Mola")
+                                                  title: working ? L("Odak zamanı") : L("Mola zamanı"), tint: .orange), seconds: 5)
+                begin(minutes: working ? Prefs.shared.pomodoroWork : Prefs.shared.pomodoroBreak, label: working ? L("Odak") : L("Mola"))
                 return
             }
-            let name = label.isEmpty ? "Süre doldu" : "\(label) · süre doldu"
+            let name = label.isEmpty ? L("Süre doldu") : Lf("%@ · süre doldu", "\(label)")
             stop()
             NotchModel.shared.showHUD(HUDInfo(icon: "bell.fill", title: name, tint: .orange), seconds: 5)
         }
@@ -216,7 +216,7 @@ struct ToolsView: View {
 
     private var timerColumn: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionTitle(text: "Zamanlayıcı")
+            SectionTitle(text: L("Zamanlayıcı"))
             if countdown.running {
                 Text(formatClock(countdown.remaining))
                     .font(.system(size: 26, weight: .semibold).monospacedDigit())
@@ -226,11 +226,11 @@ struct ToolsView: View {
                 }
                 ProgressView(value: countdown.total > 0 ? 1 - countdown.remaining / countdown.total : 0)
                     .tint(.orange)
-                Button("Durdur") { countdown.stop() }.buttonStyle(PillButtonStyle(tint: .red.opacity(0.6)))
+                Button(L("Durdur")) { countdown.stop() }.buttonStyle(PillButtonStyle(tint: .red.opacity(0.6)))
             } else {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
                     ForEach([5, 15, 25, 45], id: \.self) { m in
-                        Button("\(m) dk") { countdown.start(minutes: Double(m)) }
+                        Button(Lf("%@ dk", "\(m)")) { countdown.start(minutes: Double(m)) }
                             .buttonStyle(PillButtonStyle())
                             .frame(maxWidth: .infinity)
                     }
@@ -244,9 +244,9 @@ struct ToolsView: View {
 
     private var clipboardColumn: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionTitle(text: "Pano")
+            SectionTitle(text: L("Pano"))
             if clipboard.items.isEmpty {
-                Text("Kopyaladıklarınız burada görünür.").font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
+                Text(L("Kopyaladıklarınız burada görünür.")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
                 Spacer(minLength: 0)
             } else {
                 ScrollView(showsIndicators: false) {
@@ -261,7 +261,7 @@ struct ToolsView: View {
                                     .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
-                            .help("Yeniden kopyala")
+                            .help(L("Yeniden kopyala"))
                         }
                     }
                 }
@@ -271,7 +271,7 @@ struct ToolsView: View {
 
     private var notesColumn: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionTitle(text: "Not")
+            SectionTitle(text: L("Not"))
             TextEditor(text: $notes.text)
                 .font(.system(size: 12))
                 .scrollContentBackground(.hidden)
@@ -282,10 +282,10 @@ struct ToolsView: View {
 
     private var statsRow: some View {
         HStack(spacing: 16) {
-            stat("cpu", "İşlemci", "%\(Int((stats.cpu * 100).rounded()))")
-            stat("memorychip", "Bellek", String(format: "%.1f / %.0f GB", stats.memUsed / 1_073_741_824, stats.memTotal / 1_073_741_824))
-            stat("arrow.down", "İndirme", StatsService.rate(stats.netDown))
-            stat("arrow.up", "Yükleme", StatsService.rate(stats.netUp))
+            stat("cpu", L("İşlemci"), "%\(Int((stats.cpu * 100).rounded()))")
+            stat("memorychip", L("Bellek"), String(format: "%.1f / %.0f GB", stats.memUsed / 1_073_741_824, stats.memTotal / 1_073_741_824))
+            stat("arrow.down", L("İndirme"), StatsService.rate(stats.netDown))
+            stat("arrow.up", L("Yükleme"), StatsService.rate(stats.netUp))
             Spacer(minLength: 0)
         }
         .font(.system(size: 10.5).monospacedDigit())
@@ -368,7 +368,7 @@ struct MirrorView: View {
     var body: some View {
         Group {
             if camera.denied {
-                EmptyHint(icon: "video.slash", text: "Kamera izni verilmedi.\nSistem Ayarları › Gizlilik ve Güvenlik › Kamera'dan açabilirsiniz.")
+                EmptyHint(icon: "video.slash", text: L("Kamera izni verilmedi.\nSistem Ayarları › Gizlilik ve Güvenlik › Kamera'dan açabilirsiniz."))
             } else {
                 CameraPreview()
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))

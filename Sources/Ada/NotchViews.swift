@@ -36,14 +36,15 @@ struct NotchRootView: View {
     var body: some View {
         let size = model.currentSize()
         let shape = NotchShape(bottomRadius: model.expanded ? prefs.cornerRadius : 10)
-        let glassy = model.expanded && prefs.glass
+        let glassy = model.expanded && prefs.theme != "black"
+        let glow: Color = (prefs.theme == "glass" || prefs.theme == "black") ? .black : prefs.themeColor1
         ZStack(alignment: .top) {
-            NotchBackground(shape: shape, glassy: glassy, clarity: prefs.glassClarity,
+            NotchBackground(shape: shape, expanded: model.expanded,
                             blackBand: max(model.notchSize.height, 30) / model.expandedSize.height)
                 .overlay(
                     shape.stroke(prefs.accentColor.opacity(model.dropTargeted ? 0.9 : 0), lineWidth: 2)
                 )
-                .shadow(color: .black.opacity(model.expanded ? (glassy ? 0.3 : 0.45) : 0), radius: 18, y: 10)
+                .shadow(color: glow.opacity(model.expanded ? (glassy ? 0.38 : 0.45) : 0), radius: 20, y: 10)
             Group {
                 if model.expanded {
                     ExpandedView()
@@ -75,25 +76,31 @@ struct NotchRootView: View {
 }
 
 /// Çentiğin zemini. Kapalıyken düz siyah (fiziksel çentikle birleşir); açıkken üst şerit
-/// siyah kalır ve aşağı doğru Liquid Glass'a karışır.
+/// siyah kalır ve aşağı doğru seçili temaya karışır.
 struct NotchBackground: View {
     var shape: NotchShape
-    var glassy: Bool
-    /// 0 = neredeyse opak siyah, 1 = tamamen saydam cam.
-    var clarity: Double = 0.6
+    var expanded: Bool
     /// Üstteki tam siyah şeridin yüksekliğe oranı.
     var blackBand: CGFloat
+    @ObservedObject var prefs = Prefs.shared
 
     var body: some View {
+        let theme = expanded ? prefs.theme : "black"
+        let c1 = prefs.themeColor1, c2 = prefs.themeColor2
         ZStack {
-            if glassy {
-                let dark = (1 - clarity) * 0.9
-                if #available(macOS 26.0, *) {
-                    Color.clear.glassEffect(clarity > 0.85 ? .clear : .regular.tint(.black.opacity(dark)), in: shape)
-                } else {
-                    shape.fill(.ultraThinMaterial)
-                    shape.fill(.black.opacity(dark))
+            if theme == "black" {
+                shape.fill(Color.black)
+            } else {
+                glass(dark: theme == "neon" ? 0.78 : (1 - prefs.glassClarity) * 0.9, clear: theme != "neon" && prefs.glassClarity > 0.85)
+                if theme == "aurora" {
+                    AuroraLayer(colors: [c1, c2, prefs.accentColor])
+                        .opacity(0.55)
+                        .blendMode(.plusLighter)
+                        .clipShape(shape)
+                } else if theme == "gradient" {
+                    shape.fill(LinearGradient(colors: [c1.opacity(0.6), c2.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 }
+                // Üst şerit: fiziksel çentikle birleşen siyah
                 shape.fill(LinearGradient(stops: [
                     .init(color: .black, location: 0),
                     .init(color: .black, location: blackBand),
@@ -101,15 +108,78 @@ struct NotchBackground: View {
                     .init(color: .black.opacity(0.12), location: min(0.95, blackBand + 0.36)),
                     .init(color: .black.opacity(0.0), location: 1),
                 ], startPoint: .top, endPoint: .bottom))
-                // Camın kenarındaki ışık çizgisi
-                shape.stroke(LinearGradient(stops: [
-                    .init(color: .clear, location: 0),
-                    .init(color: .clear, location: blackBand),
-                    .init(color: .white.opacity(0.22), location: min(0.95, blackBand + 0.3)),
-                    .init(color: .white.opacity(0.38), location: 1),
-                ], startPoint: .top, endPoint: .bottom), lineWidth: 1)
-            } else {
-                shape.fill(Color.black)
+                border(theme, c1, c2)
+            }
+        }
+    }
+
+    @ViewBuilder private func glass(dark: Double, clear: Bool) -> some View {
+        if #available(macOS 26.0, *) {
+            Color.clear.glassEffect(clear ? .clear : .regular.tint(.black.opacity(dark)), in: shape)
+        } else {
+            shape.fill(.ultraThinMaterial)
+            shape.fill(.black.opacity(dark))
+        }
+    }
+
+    /// Kenar ışığı yalnızca siyah şeridin altında görünür.
+    private var fade: LinearGradient {
+        LinearGradient(stops: [
+            .init(color: .clear, location: 0),
+            .init(color: .clear, location: blackBand),
+            .init(color: .white, location: min(0.95, blackBand + 0.3)),
+            .init(color: .white, location: 1),
+        ], startPoint: .top, endPoint: .bottom)
+    }
+
+    @ViewBuilder private func border(_ theme: String, _ c1: Color, _ c2: Color) -> some View {
+        switch theme {
+        case "neon":
+            TimelineView(.animation(minimumInterval: 1.0 / 30)) { ctx in
+                let angle = Angle.degrees(ctx.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 8) / 8 * 360)
+                let ring = AngularGradient(colors: [c1, c2, prefs.accentColor, c1], center: .center, angle: angle)
+                ZStack {
+                    shape.stroke(ring, lineWidth: 5).blur(radius: 7).opacity(0.9)
+                    shape.stroke(ring, lineWidth: 1.6)
+                }
+                .mask(fade)
+            }
+        case "aurora", "gradient":
+            let line = LinearGradient(colors: [c1, c2], startPoint: .leading, endPoint: .trailing)
+            ZStack {
+                shape.stroke(line, lineWidth: 4).blur(radius: 6).opacity(0.7)
+                shape.stroke(line, lineWidth: 1.1).opacity(0.9)
+            }
+            .mask(fade)
+        default:
+            shape.stroke(LinearGradient(colors: [.white.opacity(0.22), .white.opacity(0.38)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
+                .mask(fade)
+        }
+    }
+}
+
+/// Yavaşça dolaşan, bulanık renk bulutları.
+struct AuroraLayer: View {
+    var colors: [Color]
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30)) { ctx in
+            let t = ctx.date.timeIntervalSinceReferenceDate
+            Canvas { g, size in
+                g.addFilter(.blur(radius: 44))
+                let w: Double = Double(size.width)
+                let h: Double = Double(size.height)
+                for (i, c) in colors.enumerated() {
+                    // Tür denetimi uzamasın diye adımlar ayrı ve türleri açık yazıldı.
+                    let p: Double = Double(i)
+                    let ax: Double = t * (0.23 + 0.07 * p) + p * 2.1
+                    let ay: Double = t * (0.19 + 0.05 * p) + p * 1.3
+                    let x: Double = w * (0.5 + 0.42 * sin(ax))
+                    let y: Double = h * (0.66 + 0.26 * cos(ay))
+                    let r: Double = h * (0.5 + 0.1 * sin(t * 0.3 + p))
+                    let rect = CGRect(x: x - r * 1.5, y: y - r, width: r * 3.0, height: r * 2.0)
+                    g.fill(Path(ellipseIn: rect), with: .color(c))
+                }
             }
         }
     }
@@ -284,7 +354,7 @@ struct TopBar: View {
                     Image(systemName: "gearshape.fill").foregroundStyle(.white.opacity(0.6))
                 }
                 .buttonStyle(.plain)
-                .help("Ayarlar")
+                .help(L("Ayarlar"))
             }
             .font(.system(size: 11, weight: .medium).monospacedDigit())
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -307,7 +377,7 @@ struct HomeView: View {
                 AgendaColumn().frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             if !prefs.isOn(.music) && !prefs.isOn(.calendar) && !prefs.isOn(.reminders) && !prefs.isOn(.weather) {
-                EmptyHint(icon: "square.dashed", text: "Ana sekmede gösterilecek modül açık değil.\nAyarlardan modülleri açabilirsiniz.")
+                EmptyHint(icon: "square.dashed", text: L("Ana sekmede gösterilecek modül açık değil.\nAyarlardan modülleri açabilirsiniz."))
             }
         }
     }
@@ -328,7 +398,7 @@ struct EmptyHint: View {
 struct SectionTitle: View {
     var text: String
     var body: some View {
-        Text(text.uppercased(with: Locale(identifier: "tr_TR")))
+        Text(text.uppercased(with: appLocale))
             .font(.system(size: 9.5, weight: .bold))
             .kerning(0.6)
             .foregroundStyle(.white.opacity(0.4))

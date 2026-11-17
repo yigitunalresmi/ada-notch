@@ -265,14 +265,8 @@ struct MusicCard: View {
                                     .foregroundStyle(music.shuffle ? Color.green : .white.opacity(0.45))
                                     .frame(width: 26, height: 26).contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain).help("Karışık çal")
+                            .buttonStyle(.plain).help(L("Karışık çal"))
                             Spacer(minLength: 0)
-                            if let p = music.player {
-                                Text(p == .spotify ? "Spotify" : "Apple Music")
-                                    .font(.system(size: 9.5, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(0.4))
-                                    .fixedSize()
-                            }
                         }
                     }
                 }
@@ -282,10 +276,10 @@ struct MusicCard: View {
         } else {
             VStack(spacing: 8) {
                 Image(systemName: "music.note.list").font(.system(size: 24)).foregroundStyle(.white.opacity(0.4))
-                Text("Şu an çalan bir şey yok").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
+                Text(L("Şu an çalan bir şey yok")).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
                 HStack(spacing: 8) {
-                    Button("Spotify'ı aç") { music.openPlayer(.spotify) }.buttonStyle(PillButtonStyle())
-                    Button("Music'i aç") { music.openPlayer(.music) }.buttonStyle(PillButtonStyle())
+                    Button(L("Spotify'ı aç")) { music.openPlayer(.spotify) }.buttonStyle(PillButtonStyle())
+                    Button(L("Music'i aç")) { music.openPlayer(.music) }.buttonStyle(PillButtonStyle())
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

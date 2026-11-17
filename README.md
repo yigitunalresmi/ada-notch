@@ -1,7 +1,7 @@
 # Ada
 
 MacBook çentiğinde yaşayan, Liquid Glass görünümlü bir yardımcı ve Claude tabanlı asistan.
-*A notch companion for MacBook with a Liquid Glass look and a Claude-powered assistant. The interface is currently Turkish only.*
+*A notch companion for MacBook with a Liquid Glass look and a Claude-powered assistant. Turkish and English interface — [English summary below](#english).*
 
 Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, araçlar ve Mac'inizi sizin yerinize yöneten bir asistan sunar.
 
@@ -31,9 +31,14 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 - Kalıcı hafıza ve özel talimatlar
 - İsteğe bağlı: ekrana bakma ve AppleScript çalıştırma (her betik için onay ister)
 
+**Görünüm ve ekran**
+- Beş tema: Aurora (hareketli renk bulutları), Neon (dönen ışıklı kenar), Gradyan, Cam, Siyah
+- Tema renkleri, hazır renk paletleri, cam saydamlığı, boyut, köşe yuvarlaklığı, vurgu rengi
+- Ekran iyileştirme: renk sıcaklığı, kontrast ve en düşük parlaklığın altına inen ek karartma
+
 **Ayarlar**
 - Her modül tek tek açılıp kapatılabilir
-- Cam saydamlığı, boyut, köşe yuvarlaklığı, vurgu rengi ve davranış ayarları
+- Türkçe ve İngilizce arayüz (Ayarlar › Genel › Dil)
 
 ## Gereksinimler
 
@@ -89,7 +94,8 @@ Hava durumu, şarkı sözleri ve asistan Ayarlar › Modüller'den kapatılabili
 
 ## Bilinen sınırlar
 
-- Arayüz yalnızca Türkçe.
+- Ekran iyileştirme ve ekstra parlaklık ekranın gama tablosunu değiştirir; Night Shift / True Tone ile birlikte
+  kullanıldığında renk tonu beklenenden farklı olabilir. Ada kapanınca ekran normale döner.
 - Parlaklık okuma/ayarlama ve ekstra parlaklık, Apple'ın belgelenmemiş `DisplayServices` çerçevesini ve
   ekranın gama tablosunu kullanır; bir macOS güncellemesiyle bozulabilir. Ekstra parlaklık pili daha hızlı
   tüketir ve Night Shift / True Tone ile birlikte renk tonunu geçici olarak sabitleyebilir.
@@ -110,8 +116,44 @@ Uygulamayı `build/Ada.app` üzerinden (çift tıklayarak ya da `open` ile) baş
 terminalden çalıştırırsanız macOS gizlilik denetimi uygulamayı kapatır.
 
 Kaynak dosyalar `Sources/Ada` altındadır: `NotchWindow.swift` (pencere ve fare takibi), `NotchViews.swift`
-(çentik arayüzü), `Assistant.swift` ve `AssistantTools.swift` (Claude istemcisi ve araçlar), `MediaKeys.swift`
+(çentik arayüzü ve temalar), `Assistant.swift` ve `AssistantTools.swift` (Claude istemcisi ve araçlar), `MediaKeys.swift`
 (tuş yakalama ve ekstra parlaklık), diğerleri modül başına birer dosyadır.
+
+Arayüz metinleri kodda Türkçedir ve `L("…")` ile sarılır; İngilizce karşılıkları
+`Resources/en.lproj/Localizable.strings` dosyasındadır. Yeni bir metin eklerken oraya da bir satır ekleyin.
+
+## English
+
+Ada lives in your MacBook's notch. Hover over the notch and it opens into a glass panel with music, calendar,
+weather, tools and an assistant that can operate your Mac for you.
+
+- **Home:** Spotify / Apple Music controls with synced lyrics, calendar, reminders, weather
+- **Closed notch:** now playing, timer, meeting countdown, volume/brightness indicator, extra HDR brightness on XDR
+  displays, charging and Bluetooth alerts
+- **Tools:** timer and Pomodoro, clipboard history, quick note, system stats, quick actions (appearance, keep
+  awake, capture, mute, color picker, sleep display, audio output), file shelf with AirDrop, app launcher, mirror
+- **Assistant (Claude):** text, push-to-talk and hands-free voice chat; manages calendar, reminders, music, volume,
+  brightness, dark mode, Wi‑Fi, apps, windows, files, timers, Shortcuts and Ada's own settings; persistent memory
+- **Look:** five themes (Aurora, Neon, Gradient, Glass, Black), custom colors, glass clarity, size, display tuning
+  (warmth, contrast, extra dimming)
+
+**Requirements:** macOS 14 or later (Liquid Glass on macOS 26+), Xcode or the Command Line Tools to build, and an
+[Anthropic API key](https://console.anthropic.com/) for the assistant only.
+
+**Install:**
+
+```bash
+git clone https://github.com/yigitunalresmi/ada-notch.git
+cd ada-notch
+./build.sh run
+```
+
+There is no notarized download yet; build from source. Ada follows your system language (English or Turkish);
+change it in Settings › General › Language.
+
+**Privacy:** no servers, accounts or telemetry of its own. Data leaves your Mac only for the features you use:
+assistant conversations to api.anthropic.com (your key stays in the Keychain), an approximate location to
+api.open-meteo.com for weather, and track/artist names to lrclib.net for lyrics.
 
 ## Lisans
 

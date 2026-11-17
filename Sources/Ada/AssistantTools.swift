@@ -90,6 +90,10 @@ enum ToolBox {
                  required: ["path"]),
             tool("add_to_shelf", "Put a file on Ada's file shelf so the user can drag it somewhere or AirDrop it.",
                  ["path": str("Absolute path; ~ is allowed")], required: ["path"]),
+            tool("display_tuning", "Adjust the display's colour: warmth (night filter), contrast and extra dimming below minimum brightness. Omitted values stay as they are.",
+                 ["warmth": num("0 to 100; 0 is neutral"), "contrast": num("-30 to 40; 0 is neutral"), "dim": num("0 to 70; extra dimming percent")]),
+            tool("set_theme", "Change Ada's notch theme.",
+                 ["theme": choice("Theme", ["aurora", "neon", "gradient", "glass", "black"])], required: ["theme"]),
             tool("audio_output", "List the Mac's audio output devices or switch the output to one of them (speakers, AirPods, a display…).",
                  ["action": choice("What to do", ["list", "set"]), "name": str("Device name, or part of it, when setting")],
                  required: ["action"]),
@@ -118,39 +122,41 @@ enum ToolBox {
 
     static func label(_ name: String) -> String {
         switch name {
-        case "get_calendar_events": return "Takvime bakılıyor"
-        case "create_calendar_event": return "Etkinlik ekleniyor"
-        case "get_reminders": return "Anımsatıcılara bakılıyor"
-        case "create_reminder": return "Anımsatıcı ekleniyor"
-        case "complete_reminder": return "Anımsatıcı tamamlanıyor"
-        case "music_control": return "Müzik kontrol ediliyor"
-        case "set_volume": return "Ses ayarlanıyor"
-        case "set_brightness": return "Parlaklık ayarlanıyor"
-        case "set_appearance": return "Görünüm değiştiriliyor"
-        case "open_app": return "Uygulama açılıyor"
-        case "quit_app": return "Uygulama kapatılıyor"
-        case "open_url": return "Bağlantı açılıyor"
-        case "get_weather": return "Hava durumuna bakılıyor"
-        case "timer": return "Zamanlayıcı"
-        case "clipboard": return "Pano"
-        case "note": return "Not"
-        case "get_system_status": return "Sistem durumuna bakılıyor"
-        case "set_module": return "Ada ayarı değiştiriliyor"
-        case "set_wifi": return "Wi‑Fi ayarlanıyor"
-        case "system_action": return "Sistem işlemi"
-        case "list_shortcuts": return "Kestirmeler listeleniyor"
-        case "run_shortcut": return "Kestirme çalıştırılıyor"
-        case "look_at_screen": return "Ekrana bakılıyor"
-        case "arrange_window": return "Pencere yerleştiriliyor"
-        case "get_selected_text": return "Seçili metin okunuyor"
-        case "find_files": return "Dosya aranıyor"
-        case "open_file": return "Dosya açılıyor"
-        case "add_to_shelf": return "Rafa ekleniyor"
-        case "keep_awake": return "Uyku ayarı"
-        case "audio_output": return "Ses çıkışı"
+        case "get_calendar_events": return L("Takvime bakılıyor")
+        case "create_calendar_event": return L("Etkinlik ekleniyor")
+        case "get_reminders": return L("Anımsatıcılara bakılıyor")
+        case "create_reminder": return L("Anımsatıcı ekleniyor")
+        case "complete_reminder": return L("Anımsatıcı tamamlanıyor")
+        case "music_control": return L("Müzik kontrol ediliyor")
+        case "set_volume": return L("Ses ayarlanıyor")
+        case "set_brightness": return L("Parlaklık ayarlanıyor")
+        case "set_appearance": return L("Görünüm değiştiriliyor")
+        case "open_app": return L("Uygulama açılıyor")
+        case "quit_app": return L("Uygulama kapatılıyor")
+        case "open_url": return L("Bağlantı açılıyor")
+        case "get_weather": return L("Hava durumuna bakılıyor")
+        case "timer": return L("Zamanlayıcı")
+        case "clipboard": return L("Pano")
+        case "note": return L("Not")
+        case "get_system_status": return L("Sistem durumuna bakılıyor")
+        case "set_module": return L("Ada ayarı değiştiriliyor")
+        case "set_wifi": return L("Wi‑Fi ayarlanıyor")
+        case "system_action": return L("Sistem işlemi")
+        case "list_shortcuts": return L("Kestirmeler listeleniyor")
+        case "run_shortcut": return L("Kestirme çalıştırılıyor")
+        case "look_at_screen": return L("Ekrana bakılıyor")
+        case "arrange_window": return L("Pencere yerleştiriliyor")
+        case "get_selected_text": return L("Seçili metin okunuyor")
+        case "find_files": return L("Dosya aranıyor")
+        case "open_file": return L("Dosya açılıyor")
+        case "add_to_shelf": return L("Rafa ekleniyor")
+        case "keep_awake": return L("Uyku ayarı")
+        case "audio_output": return L("Ses çıkışı")
+        case "display_tuning": return L("Ekran ayarlanıyor")
+        case "set_theme": return L("Tema değiştiriliyor")
         case "pomodoro": return "Pomodoro"
-        case "remember": return "Hafızaya kaydediliyor"
-        case "forget": return "Hafızadan siliniyor"
+        case "remember": return L("Hafızaya kaydediliyor")
+        case "forget": return L("Hafızadan siliniyor")
         case "run_applescript": return "AppleScript"
         default: return name
         }
@@ -410,7 +416,7 @@ enum ToolBox {
 
         case "run_shortcut":
             guard let n = input["name"] as? String else { return .fail("Missing name.") }
-            guard await AssistantEngine.shared.confirm(title: "Kestirme çalıştırılsın mı?", detail: n) else {
+            guard await AssistantEngine.shared.confirm(title: L("Kestirme çalıştırılsın mı?"), detail: n) else {
                 return .fail("The user declined to run this shortcut.")
             }
             var args = ["run", n]
@@ -453,6 +459,18 @@ enum ToolBox {
                 return .ok("Revealed in Finder.")
             }
             return NSWorkspace.shared.open(url) ? .ok("Opened.") : .fail("Could not open the file.")
+
+        case "display_tuning":
+            let p = Prefs.shared
+            if let w = number(input["warmth"]) { p.warmth = min(1, max(0, w / 100)) }
+            if let c = number(input["contrast"]) { p.contrast = min(0.4, max(-0.3, c / 100)) }
+            if let d = number(input["dim"]) { p.dim = min(0.7, max(0, d / 100)) }
+            return .ok(String(format: "Display: warmth %.0f%%, contrast %+.0f, extra dim %.0f%%.", p.warmth * 100, p.contrast * 100, p.dim * 100))
+
+        case "set_theme":
+            guard let t = input["theme"] as? String, Prefs.themes.contains(where: { $0.id == t }) else { return .fail("Unknown theme.") }
+            Prefs.shared.theme = t
+            return .ok("Theme set to \(t).")
 
         case "audio_output":
             let devices = Audio.outputDevices()
@@ -513,7 +531,7 @@ enum ToolBox {
             guard Prefs.shared.allowAppleScript else { return .fail("AppleScript is turned off in Ada's settings.") }
             guard let script = input["script"] as? String else { return .fail("Missing script.") }
             let purpose = input["purpose"] as? String ?? ""
-            guard await AssistantEngine.shared.confirm(title: purpose.isEmpty ? "AppleScript çalıştırılsın mı?" : purpose, detail: script) else {
+            guard await AssistantEngine.shared.confirm(title: purpose.isEmpty ? L("AppleScript çalıştırılsın mı?") : purpose, detail: script) else {
                 return .fail("The user declined to run this script.")
             }
             let r = await Script.run(script)

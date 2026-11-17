@@ -4,10 +4,10 @@ import SwiftUI
 struct SettingsView: View {
     var body: some View {
         TabView {
-            ModulesSettings().tabItem { Label("Modüller", systemImage: "square.grid.2x2") }
-            AppearanceSettings().tabItem { Label("Görünüm", systemImage: "paintbrush") }
-            AssistantSettings().tabItem { Label("Asistan", systemImage: "sparkles") }
-            GeneralSettings().tabItem { Label("Genel", systemImage: "gearshape") }
+            ModulesSettings().tabItem { Label(L("Modüller"), systemImage: "square.grid.2x2") }
+            AppearanceSettings().tabItem { Label(L("Görünüm"), systemImage: "paintbrush") }
+            AssistantSettings().tabItem { Label(L("Asistan"), systemImage: "sparkles") }
+            GeneralSettings().tabItem { Label(L("Genel"), systemImage: "gearshape") }
         }
         .padding(.top, 8)
         .frame(width: 620, height: 560)
@@ -18,10 +18,10 @@ struct ModulesSettings: View {
     @ObservedObject var prefs = Prefs.shared
 
     private let groups: [(String, [ModuleID])] = [
-        ("Ana sekme", [.music, .lyrics, .calendar, .reminders, .weather]),
-        ("Canlı bildirimler ve ekran", [.battery, .bluetooth, .hud, .xdr]),
-        ("Araçlar", [.timer, .clipboard, .notes, .stats, .shelf, .launcher, .mirror]),
-        ("Asistan", [.assistant]),
+        (L("Ana sekme"), [.music, .lyrics, .calendar, .reminders, .weather]),
+        (L("Canlı bildirimler ve ekran"), [.battery, .bluetooth, .hud, .xdr]),
+        (L("Araçlar"), [.timer, .clipboard, .notes, .stats, .shelf, .launcher, .mirror]),
+        (L("Asistan"), [.assistant]),
     ]
 
     var body: some View {
@@ -58,7 +58,7 @@ struct AssistantSettings: View {
                 HStack {
                     SecureField("sk-ant-…", text: $key)
                         .textFieldStyle(.roundedBorder)
-                    Button("Kaydet") {
+                    Button(L("Kaydet")) {
                         Keychain.set(key)
                         key = ""
                         saved = (Keychain.get() ?? "").isEmpty == false
@@ -67,13 +67,13 @@ struct AssistantSettings: View {
                     .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 HStack {
-                    Label(saved ? "Anahtar kayıtlı (Anahtar Zinciri'nde saklanıyor)" : "Henüz anahtar yok",
+                    Label(saved ? L("Anahtar kayıtlı (Anahtar Zinciri'nde saklanıyor)") : L("Henüz anahtar yok"),
                           systemImage: saved ? "checkmark.seal.fill" : "key")
                         .foregroundStyle(saved ? .green : .secondary)
                         .font(.callout)
                     Spacer()
                     if saved {
-                        Button("Sil", role: .destructive) {
+                        Button(L("Sil"), role: .destructive) {
                             Keychain.set("")
                             saved = false
                             AssistantEngine.shared.refreshKey()
@@ -81,26 +81,26 @@ struct AssistantSettings: View {
                     }
                 }
             } header: {
-                Text("Anthropic API anahtarı")
+                Text(L("Anthropic API anahtarı"))
             } footer: {
-                Text("Anahtarı console.anthropic.com adresinden alabilirsiniz. Yalnızca bu Mac'in Anahtar Zinciri'nde saklanır ve yalnızca api.anthropic.com'a gönderilir.")
+                Text(L("Anahtarı console.anthropic.com adresinden alabilirsiniz. Yalnızca bu Mac'in Anahtar Zinciri'nde saklanır ve yalnızca api.anthropic.com'a gönderilir."))
             }
 
-            Section("Model ve ses") {
+            Section(L("Model ve ses")) {
                 Picker("Model", selection: $prefs.model) {
                     ForEach(ClaudeClient.models, id: \.id) { Text($0.name).tag($0.id) }
                 }
-                Picker("Konuşma dili", selection: $prefs.speechLocale) {
+                Picker(L("Konuşma dili"), selection: $prefs.speechLocale) {
                     Text("Türkçe").tag("tr-TR")
                     Text("English (US)").tag("en-US")
                     Text("English (UK)").tag("en-GB")
                     Text("Deutsch").tag("de-DE")
                 }
-                Toggle("Yanıtları sesli oku", isOn: $prefs.speakReplies)
-                Picker("Yanıt biçimi", selection: $prefs.effort) {
-                    Text("Hızlı").tag("low")
-                    Text("Dengeli").tag("medium")
-                    Text("Derinlemesine (yavaş, pahalı)").tag("high")
+                Toggle(L("Yanıtları sesli oku"), isOn: $prefs.speakReplies)
+                Picker(L("Yanıt biçimi"), selection: $prefs.effort) {
+                    Text(L("Hızlı")).tag("low")
+                    Text(L("Dengeli")).tag("medium")
+                    Text(L("Derinlemesine (yavaş, pahalı)")).tag("high")
                 }
             }
 
@@ -109,14 +109,14 @@ struct AssistantSettings: View {
                     .font(.body)
                     .frame(height: 70)
             } header: {
-                Text("Özel talimatlar")
+                Text(L("Özel talimatlar"))
             } footer: {
-                Text("Asistanın her sohbette uymasını istediğiniz kurallar. Örnek: \"Bana sen diye hitap et, yanıtları tek cümle tut.\"")
+                Text(L("Asistanın her sohbette uymasını istediğiniz kurallar. Örnek: \"Bana sen diye hitap et, yanıtları tek cümle tut.\""))
             }
 
             Section {
                 if prefs.memory.isEmpty {
-                    Text("Henüz kayıtlı bir şey yok. Asistana \"şunu hatırla…\" diyebilirsiniz.")
+                    Text(L("Henüz kayıtlı bir şey yok. Asistana \"şunu hatırla…\" diyebilirsiniz."))
                         .font(.callout).foregroundStyle(.secondary)
                 } else {
                     ForEach(prefs.memory, id: \.self) { item in
@@ -129,37 +129,37 @@ struct AssistantSettings: View {
                     }
                 }
             } header: {
-                Text("Hafıza")
+                Text(L("Hafıza"))
             } footer: {
-                Text("Asistanın sizin hakkınızda hatırladıkları. Yalnızca bu Mac'te saklanır ve her sohbette Claude'a gönderilir.")
+                Text(L("Asistanın sizin hakkınızda hatırladıkları. Yalnızca bu Mac'te saklanır ve her sohbette Claude'a gönderilir."))
             }
 
             Section {
                 Toggle(isOn: $prefs.allowWeb) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Web araması")
-                        Text("Asistan güncel bilgi için internette arama yapabilir (Anthropic tarafında çalışır, ek ücretlidir).")
+                        Text(L("Web araması"))
+                        Text(L("Asistan güncel bilgi için internette arama yapabilir (Anthropic tarafında çalışır, ek ücretlidir)."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 Toggle(isOn: $prefs.allowScreen) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Ekrana bakabilsin")
-                        Text("İstediğinizde ekran görüntüsü alıp Claude'a gönderir. macOS ekran kaydı izni ister.")
+                        Text(L("Ekrana bakabilsin"))
+                        Text(L("İstediğinizde ekran görüntüsü alıp Claude'a gönderir. macOS ekran kaydı izni ister."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 Toggle(isOn: $prefs.allowAppleScript) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("AppleScript çalıştırabilsin")
-                        Text("Diğer araçların yapamadığı işler için. Her betik çalışmadan önce size gösterilir ve onayınız istenir.")
+                        Text(L("AppleScript çalıştırabilsin"))
+                        Text(L("Diğer araçların yapamadığı işler için. Her betik çalışmadan önce size gösterilir ve onayınız istenir."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
             } header: {
-                Text("Asistanın yetkileri")
+                Text(L("Asistanın yetkileri"))
             } footer: {
-                Text("Takvim, anımsatıcı, müzik, ses, parlaklık, görünüm, uygulama açma/kapama, zamanlayıcı, pano, not ve Ada modülleri her zaman kullanılabilir.")
+                Text(L("Takvim, anımsatıcı, müzik, ses, parlaklık, görünüm, uygulama açma/kapama, zamanlayıcı, pano, not ve Ada modülleri her zaman kullanılabilir."))
             }
         }
         .formStyle(.grouped)
@@ -175,53 +175,53 @@ struct GeneralSettings: View {
 
     var body: some View {
         Form {
-            Section("Çentik") {
-                Toggle("Fareyle üzerine gelince aç", isOn: $prefs.openOnHover)
+            Section(L("Çentik")) {
+                Toggle(L("Fareyle üzerine gelince aç"), isOn: $prefs.openOnHover)
                 if prefs.openOnHover {
                     HStack {
-                        Text("Açılma gecikmesi")
+                        Text(L("Açılma gecikmesi"))
                         Slider(value: $prefs.hoverDelay, in: 0...0.8)
-                        Text(String(format: "%.2f sn", prefs.hoverDelay)).monospacedDigit().frame(width: 56, alignment: .trailing)
+                        Text(String(format: L("%.2f sn"), prefs.hoverDelay)).monospacedDigit().frame(width: 56, alignment: .trailing)
                     }
                 } else {
-                    Text("Kapalıyken çentiğe tıklayarak açılır.").font(.caption).foregroundStyle(.secondary)
+                    Text(L("Kapalıyken çentiğe tıklayarak açılır.")).font(.caption).foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("Kapanma gecikmesi")
+                    Text(L("Kapanma gecikmesi"))
                     Slider(value: $prefs.closeDelay, in: 0.1...2)
-                    Text(String(format: "%.1f sn", prefs.closeDelay)).monospacedDigit().frame(width: 56, alignment: .trailing)
+                    Text(String(format: L("%.1f sn"), prefs.closeDelay)).monospacedDigit().frame(width: 56, alignment: .trailing)
                 }
-                Toggle("Son açık sekmeyi hatırla", isOn: $prefs.rememberTab)
-                Toggle("Açılırken dokunsal geri bildirim", isOn: $prefs.haptics)
+                Toggle(L("Son açık sekmeyi hatırla"), isOn: $prefs.rememberTab)
+                Toggle(L("Açılırken dokunsal geri bildirim"), isOn: $prefs.haptics)
             }
-            Section("Modül ayarları") {
-                Picker("Sıcaklık birimi", selection: $prefs.fahrenheit) {
+            Section(L("Modül ayarları")) {
+                Picker(L("Sıcaklık birimi"), selection: $prefs.fahrenheit) {
                     Text("°C").tag(false)
                     Text("°F").tag(true)
                 }
                 HStack {
-                    Text("Pano geçmişi")
+                    Text(L("Pano geçmişi"))
                     Slider(value: $prefs.clipboardLimit, in: 10...100, step: 10)
-                    Text("\(Int(prefs.clipboardLimit)) öğe").monospacedDigit().frame(width: 64, alignment: .trailing)
+                    Text(Lf("%@ öğe", "\(Int(prefs.clipboardLimit))")).monospacedDigit().frame(width: 64, alignment: .trailing)
                 }
-                Toggle("Zamanlayıcı bitince ses çal", isOn: $prefs.timerSound)
-                Stepper("Pomodoro odak süresi: \(Int(prefs.pomodoroWork)) dk", value: $prefs.pomodoroWork, in: 5...90, step: 5)
-                Stepper("Pomodoro mola süresi: \(Int(prefs.pomodoroBreak)) dk", value: $prefs.pomodoroBreak, in: 1...30, step: 1)
+                Toggle(L("Zamanlayıcı bitince ses çal"), isOn: $prefs.timerSound)
+                Stepper(Lf("Pomodoro odak süresi: %@ dk", "\(Int(prefs.pomodoroWork))"), value: $prefs.pomodoroWork, in: 5...90, step: 5)
+                Stepper(Lf("Pomodoro mola süresi: %@ dk", "\(Int(prefs.pomodoroBreak))"), value: $prefs.pomodoroBreak, in: 1...30, step: 1)
                 HStack {
-                    Text("HDR üst sınırı")
+                    Text(L("HDR üst sınırı"))
                     Slider(value: $prefs.hdrMax, in: 1.2...1.6, step: 0.1)
                     Text("%\(Int((prefs.hdrMax * 100).rounded()))").monospacedDigit().frame(width: 64, alignment: .trailing)
                 }
             }
             Section {
                 HStack {
-                    Label(trusted ? "Erişilebilirlik izni verildi" : "Erişilebilirlik izni yok",
+                    Label(trusted ? L("Erişilebilirlik izni verildi") : L("Erişilebilirlik izni yok"),
                           systemImage: trusted ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
                         .foregroundStyle(trusted ? .green : .orange)
                     Spacer()
                     if !trusted {
-                        Button("İzin iste") { MediaKeyTap.shared.requestTrust() }
-                        Button("Ayarı aç") {
+                        Button(L("İzin iste")) { MediaKeyTap.shared.requestTrust() }
+                        Button(L("Ayarı aç")) {
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
                         }
                     }
@@ -229,7 +229,7 @@ struct GeneralSettings: View {
                 if prefs.isOn(.xdr) {
                     if boost.available {
                         HStack {
-                            Text("Ekstra parlaklık")
+                            Text(L("Ekstra parlaklık"))
                             Slider(value: Binding(get: { boost.factor }, set: { v in
                                 if v > 1.001 { _ = Brightness.set(1) }
                                 boost.set(v)
@@ -237,20 +237,29 @@ struct GeneralSettings: View {
                             Text("%\(Int((boost.factor * 100).rounded()))").monospacedDigit().frame(width: 48, alignment: .trailing)
                         }
                     } else {
-                        Text("Bu ekran HDR ek parlaklığını desteklemiyor.").font(.caption).foregroundStyle(.secondary)
+                        Text(L("Bu ekran HDR ek parlaklığını desteklemiyor.")).font(.caption).foregroundStyle(.secondary)
                     }
                 }
             } header: {
-                Text("Ses ve parlaklık tuşları")
+                Text(L("Ses ve parlaklık tuşları"))
             } footer: {
-                Text("İzin verildiğinde ses ve parlaklık tuşlarında macOS'in göstergesi yerine çentikteki gösterge çıkar; parlaklık %100'deyken artırmaya devam ederseniz HDR aralığına geçer. İzin yokken tuşlar her zamanki gibi çalışır.")
+                Text(L("İzin verildiğinde ses ve parlaklık tuşlarında macOS'in göstergesi yerine çentikteki gösterge çıkar; parlaklık %100'deyken artırmaya devam ederseniz HDR aralığına geçer. İzin yokken tuşlar her zamanki gibi çalışır."))
             }
             .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in trusted = MediaKeyTap.shared.trusted }
-            Section("Kısayol") {
-                Toggle("⌥ Boşluk ile asistanı aç", isOn: $prefs.hotkey)
+            Section {
+                Picker(L("Dil"), selection: Binding(get: { AppLanguage.selection }, set: { AppLanguage.set($0) })) {
+                    Text(L("Sistem dili")).tag("system")
+                    Text("Türkçe").tag("tr")
+                    Text("English").tag("en")
+                }
+            } footer: {
+                Text(L("Dili değiştirmek için Ada yeniden başlatılır."))
             }
-            Section("Başlangıç") {
-                Toggle("Oturum açıldığında Ada'yı başlat", isOn: Binding(
+            Section(L("Kısayol")) {
+                Toggle(L("⌥ Boşluk ile asistanı aç"), isOn: $prefs.hotkey)
+            }
+            Section(L("Başlangıç")) {
+                Toggle(L("Oturum açıldığında Ada'yı başlat"), isOn: Binding(
                     get: { loginItem },
                     set: { on in
                         do {
@@ -266,7 +275,7 @@ struct GeneralSettings: View {
                 }
             }
             Section {
-                Button("Ada'dan Çık") { NSApp.terminate(nil) }
+                Button(L("Ada'dan Çık")) { NSApp.terminate(nil) }
             }
         }
         .formStyle(.grouped)
@@ -279,49 +288,104 @@ struct AppearanceSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Cam (Liquid Glass) görünüm", isOn: $prefs.glass)
-                if prefs.glass {
+                Picker(L("Tema"), selection: $prefs.theme) {
+                    ForEach(Prefs.themes, id: \.id) { Text($0.name).tag($0.id) }
+                }
+                .pickerStyle(.segmented)
+                if prefs.theme != "black" && prefs.theme != "glass" {
+                    ColorPicker(L("Tema rengi 1"), selection: Binding(get: { prefs.themeColor1 }, set: { prefs.color1 = $0.hexString }), supportsOpacity: false)
+                    ColorPicker(L("Tema rengi 2"), selection: Binding(get: { prefs.themeColor2 }, set: { prefs.color2 = $0.hexString }), supportsOpacity: false)
                     HStack {
-                        Text("Cam saydamlığı")
+                        Text(L("Hazır renkler"))
+                        Spacer()
+                        ForEach(AppearanceSettings.palettes, id: \.0) { pal in
+                            Button {
+                                prefs.color1 = pal.1
+                                prefs.color2 = pal.2
+                            } label: {
+                                LinearGradient(colors: [Color(hex: pal.1) ?? .gray, Color(hex: pal.2) ?? .gray], startPoint: .leading, endPoint: .trailing)
+                                    .frame(width: 34, height: 18)
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .help(pal.0)
+                        }
+                    }
+                }
+                if prefs.theme != "black" && prefs.theme != "neon" {
+                    HStack {
+                        Text(L("Cam saydamlığı"))
                         Slider(value: $prefs.glassClarity, in: 0...1)
                         Text("%\(Int((prefs.glassClarity * 100).rounded()))").monospacedDigit().frame(width: 48, alignment: .trailing)
                     }
                 }
-                Picker("Vurgu rengi", selection: $prefs.accent) {
+                Picker(L("Vurgu rengi"), selection: $prefs.accent) {
                     ForEach(Prefs.accents, id: \.id) { a in
                         Label { Text(a.name) } icon: { Image(systemName: "circle.fill").foregroundStyle(a.color) }.tag(a.id)
                     }
                 }
             } header: {
-                Text("Cam ve renk")
+                Text(L("Tema"))
             } footer: {
-                Text("Saydamlık arttıkça arkadaki içerik daha net görünür; parlak arka planlarda yazıların okunması zorlaşabilir.")
+                Text(L("Saydamlık arttıkça arkadaki içerik daha net görünür; parlak arka planlarda yazıların okunması zorlaşabilir."))
             }
 
-            Section("Boyut") {
-                slider("Genişlik", $prefs.expandedWidth, 560...880, unit: "pt")
-                slider("Yükseklik", $prefs.expandedHeight, 200...400, unit: "pt")
-                slider("Köşe yuvarlaklığı", $prefs.cornerRadius, 8...48, unit: "pt")
-                Button("Varsayılan boyuta dön") {
+            Section(L("Boyut")) {
+                slider(L("Genişlik"), $prefs.expandedWidth, 560...880, unit: "pt")
+                slider(L("Yükseklik"), $prefs.expandedHeight, 200...400, unit: "pt")
+                slider(L("Köşe yuvarlaklığı"), $prefs.cornerRadius, 8...48, unit: "pt")
+                Button(L("Varsayılan boyuta dön")) {
                     prefs.expandedWidth = 720
                     prefs.expandedHeight = 240
                     prefs.cornerRadius = 30
                 }
             }
 
-            Section("Kapalı çentik") {
-                Toggle("Müzik çalarken kapak ve ekolayzır göster", isOn: $prefs.showMusicWings)
-                Toggle("Bir saat içindeki toplantıyı geri sayımla göster", isOn: $prefs.showMeeting)
+            Section {
+                percent(L("Renk sıcaklığı"), $prefs.warmth, 0...1)
+                HStack {
+                    Text(L("Kontrast"))
+                    Slider(value: $prefs.contrast, in: -0.3...0.4)
+                    Text(String(format: "%+d", Int((prefs.contrast * 100).rounded()))).monospacedDigit().frame(width: 64, alignment: .trailing)
+                }
+                percent(L("Ek karartma"), $prefs.dim, 0...0.7)
+                Button(L("Ekranı varsayılana döndür")) {
+                    prefs.warmth = 0
+                    prefs.contrast = 0
+                    prefs.dim = 0
+                }
+            } header: {
+                Text(L("Ekran iyileştirme"))
+            } footer: {
+                Text(L("Ekranın renk tablosunu değiştirir: sıcaklık gece için maviyi azaltır, ek karartma en düşük parlaklığın da altına iner. Ada kapanınca ekran normale döner. Ekran görüntülerine yansımaz."))
+            }
+
+            Section(L("Kapalı çentik")) {
+                Toggle(L("Müzik çalarken kapak ve ekolayzır göster"), isOn: $prefs.showMusicWings)
+                Toggle(L("Bir saat içindeki toplantıyı geri sayımla göster"), isOn: $prefs.showMeeting)
             }
 
             Section {
-                Button("Çentiği aç ve önizle") { NotchController.shared.preview() }
+                Button(L("Çentiği aç ve önizle")) { NotchController.shared.preview() }
             } footer: {
-                Text("Önizleme 6 saniye açık kalır; ayarları değiştirdikçe anında güncellenir.")
+                Text(L("Önizleme 6 saniye açık kalır; ayarları değiştirdikçe anında güncellenir."))
             }
         }
         .formStyle(.grouped)
     }
+
+    private func percent(_ title: String, _ value: Binding<Double>, _ range: ClosedRange<Double>) -> some View {
+        HStack {
+            Text(title)
+            Slider(value: value, in: range)
+            Text("%\(Int((value.wrappedValue * 100).rounded()))").monospacedDigit().frame(width: 64, alignment: .trailing)
+        }
+    }
+
+    static let palettes: [(String, String, String)] = [
+        (L("Mor gece"), "#7B5CFF", "#00D4FF"), (L("Gün batımı"), "#FF5E62", "#FF9966"), (L("Orman"), "#00C9A7", "#C4FCEF"),
+        (L("Şeker"), "#FF6CAB", "#7366FF"), (L("Lav"), "#FF3D00", "#FFD600"), (L("Buz"), "#74EBD5", "#ACB6E5"),
+    ]
 
     private func slider(_ title: String, _ value: Binding<Double>, _ range: ClosedRange<Double>, unit: String) -> some View {
         HStack {

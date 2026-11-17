@@ -1,0 +1,9 @@
+"NSAppleEventsUsageDescription" = "Ada, müziği kontrol etmek ve asistanın istediğiniz işlemleri yapabilmesi için diğer uygulamalara komut gönderir.";
+"NSCalendarsFullAccessUsageDescription" = "Ada, yaklaşan etkinlikleri göstermek ve asistanın etkinlik ekleyebilmesi için takviminize erişir.";
+"NSRemindersFullAccessUsageDescription" = "Ada, anımsatıcılarınızı göstermek ve asistanın anımsatıcı ekleyebilmesi için erişim ister.";
+"NSLocationUsageDescription" = "Ada, bulunduğunuz yerin hava durumunu göstermek için konumunuzu kullanır.";
+"NSLocationWhenInUseUsageDescription" = "Ada, bulunduğunuz yerin hava durumunu göstermek için konumunuzu kullanır.";
+"NSCameraUsageDescription" = "Ada, Ayna modülünde kendinizi görebilmeniz için kamerayı kullanır.";
+"NSMicrophoneUsageDescription" = "Ada, asistanla sesli konuşabilmeniz için mikrofonu kullanır.";
+"NSSpeechRecognitionUsageDescription" = "Ada, söylediklerinizi yazıya çevirmek için konuşma tanımayı kullanır.";
+"NSBluetoothAlwaysUsageDescription" = "Ada, bağlanan Bluetooth cihazlarını çentikte göstermek için Bluetooth'u kullanır.";

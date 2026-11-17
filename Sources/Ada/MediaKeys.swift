@@ -168,55 +168,86 @@ final class BoostView: MTKView, MTKViewDelegate {
     }
 }
 
+/// Ekranın gama tablosunu yönetir: ekstra (HDR) parlaklık, renk sıcaklığı, kontrast ve ek karartma.
 final class BoostService: ObservableObject {
     static let shared = BoostService()
 
-    /// Hedef değer. 1.0 = normal; en fazla `maxFactor`.
+    /// Ekstra parlaklık hedefi. 1.0 = normal; en fazla `maxFactor`.
     @Published private(set) var factor: Double = 1.0
     let step = 0.1
 
     private var window: BoostWindow?
     private var timer: Timer?
     private var observing = false
-    /// Hedefe doğru yumuşakça ilerleyen değer.
+    /// Hedefe doğru yumuşakça ilerleyen parlaklık değeri.
     private var rendered = 1.0
-    /// Gama tablosuna en son uygulanan değer.
-    private var applied = 1.0
+    /// Tabloya en son uygulanan ayarların özeti (gereksiz yazmayı önler).
+    private var signature = ""
     private var displayID: CGDirectDisplayID = 0
     private var baseR: [CGGammaValue] = [], baseG: [CGGammaValue] = [], baseB: [CGGammaValue] = []
 
-    private var screen: NSScreen? {
+    private var edrScreen: NSScreen? {
         NSScreen.screens.first { $0.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.05 }
     }
+    private var targetScreen: NSScreen? { edrScreen ?? NSScreen.main ?? NSScreen.screens.first }
 
-    var available: Bool { screen != nil }
+    var available: Bool { edrScreen != nil }
 
     var maxFactor: Double {
-        guard let s = screen else { return 1 }
+        guard let s = edrScreen else { return 1 }
         return min(Prefs.shared.hdrMax, Double(s.maximumPotentialExtendedDynamicRangeColorComponentValue))
     }
 
     /// 0…1: ek parlaklık aralığının ne kadarı kullanılıyor.
     var fraction: Double { maxFactor > 1 ? (factor - 1) / (maxFactor - 1) : 0 }
 
+    private var tuning: Bool {
+        let p = Prefs.shared
+        return p.warmth > 0.005 || abs(p.contrast) > 0.005 || p.dim > 0.005
+    }
+
     func set(_ value: Double) {
         let f = min(maxFactor, max(1, (value * 100).rounded() / 100))
         if f != factor { factor = f }
-        if f > 1.001 { start() }
+        refresh()
     }
 
-    private func start() {
-        guard window == nil, let s = screen,
-              let id = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return }
-        // Değiştirmeden önce ekranın kendi gama tablosunu sakla.
+    /// Parlaklık hedefi ya da ekran ayarları değiştiğinde çağrılır.
+    func refresh() {
+        observe()
+        if factor > 1.001 {
+            guard captureBase() else { return }
+            startBoost()
+        } else if timer == nil {
+            applyTable(boost: 1)
+        }
+    }
+
+    private func observe() {
+        guard !observing else { return }
+        observing = true
+        NotificationCenter.default.addObserver(self, selector: #selector(displayReset),
+                                               name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(displayReset),
+                                                          name: NSWorkspace.screensDidWakeNotification, object: nil)
+    }
+
+    /// Değiştirmeden önce ekranın kendi gama tablosunu saklar.
+    private func captureBase() -> Bool {
+        if !baseR.isEmpty { return true }
+        guard let s = targetScreen,
+              let id = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return false }
         var r = [CGGammaValue](repeating: 0, count: 256), g = r, b = r
         var count: UInt32 = 0
-        guard CGGetDisplayTransferByTable(id, 256, &r, &g, &b, &count) == .success, count > 1 else { return }
+        guard CGGetDisplayTransferByTable(id, 256, &r, &g, &b, &count) == .success, count > 1 else { return false }
         displayID = id
         baseR = Array(r.prefix(Int(count))); baseG = Array(g.prefix(Int(count))); baseB = Array(b.prefix(Int(count)))
-        rendered = 1
-        applied = 1
+        signature = ""
+        return true
+    }
 
+    private func startBoost() {
+        guard window == nil, let s = edrScreen else { return }
         // Fiziksel çentiğin arkasında kalan, görünmeyen küçük HDR katmanı.
         let frame = NSRect(x: s.frame.midX - 1, y: s.frame.maxY - 3, width: 2, height: 2)
         let w = BoostWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -231,12 +262,7 @@ final class BoostService: ObservableObject {
         w.setFrame(frame, display: true)
         w.orderFrontRegardless()
         window = w
-
-        if !observing {
-            observing = true
-            NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
-                                                   name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        }
+        rendered = 1
         let t = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
@@ -249,27 +275,46 @@ final class BoostService: ObservableObject {
         rendered = abs(delta) <= speed ? factor : rendered + (delta > 0 ? speed : -speed)
 
         // Sistem HDR aralığını kademeli açar; o an izin verilenden fazlasını isteme.
-        let headroom = Double(screen?.maximumExtendedDynamicRangeColorComponentValue ?? 1)
-        let value = max(1, min(rendered, headroom))
-        if abs(value - applied) > 0.002 { apply(value) }
+        let headroom = Double(edrScreen?.maximumExtendedDynamicRangeColorComponentValue ?? 1)
+        applyTable(boost: max(1, min(rendered, headroom)))
 
-        if factor <= 1.001, rendered <= 1.001 { stop() }
+        if factor <= 1.001, rendered <= 1.001 {
+            timer?.invalidate(); timer = nil
+            window?.orderOut(nil)
+            window = nil
+            rendered = 1
+            applyTable(boost: 1)
+        }
     }
 
-    private func apply(_ value: Double) {
-        guard !baseR.isEmpty else { return }
-        let f = CGGammaValue(value)
-        var r = baseR.map { $0 * f }, g = baseG.map { $0 * f }, b = baseB.map { $0 * f }
+    private func applyTable(boost: Double) {
+        let p = Prefs.shared
+        if boost <= 1.001, !tuning {
+            restore()
+            return
+        }
+        guard captureBase() else { return }
+        let sig = String(format: "%.3f|%.3f|%.3f|%.3f", boost, p.warmth, p.contrast, p.dim)
+        guard sig != signature else { return }
+        signature = sig
+
+        let dim: Double = min(0.8, max(0.0, p.dim))
+        let scale: Double = boost * (1.0 - dim)
+        let gainG: Double = 1.0 - 0.22 * p.warmth
+        let gainB: Double = 1.0 - 0.55 * p.warmth
+        let c: Double = 1.0 + p.contrast
+        func table(_ base: [CGGammaValue], _ gain: Double) -> [CGGammaValue] {
+            var out = [CGGammaValue]()
+            out.reserveCapacity(base.count)
+            for v in base {
+                let centered: Double = (Double(v) - 0.5) * c + 0.5
+                let curved: Double = min(1.0, max(0.0, centered))
+                out.append(CGGammaValue(curved * gain * scale))
+            }
+            return out
+        }
+        var r = table(baseR, 1.0), g = table(baseG, gainG), b = table(baseB, gainB)
         CGSetDisplayTransferByTable(displayID, UInt32(r.count), &r, &g, &b)
-        applied = value
-    }
-
-    private func stop() {
-        timer?.invalidate(); timer = nil
-        if applied != 1 || !baseR.isEmpty { restore() }
-        window?.orderOut(nil)
-        window = nil
-        rendered = 1
     }
 
     /// Ekranın gama tablosunu ilk haline döndürür.
@@ -277,19 +322,23 @@ final class BoostService: ObservableObject {
         guard !baseR.isEmpty else { return }
         var r = baseR, g = baseG, b = baseB
         CGSetDisplayTransferByTable(displayID, UInt32(r.count), &r, &g, &b)
-        applied = 1
         baseR = []; baseG = []; baseB = []
+        signature = ""
     }
 
-    @objc private func screensChanged() {
-        guard window != nil else { return }
-        if let s = screen {
-            window?.setFrame(NSRect(x: s.frame.midX - 1, y: s.frame.maxY - 3, width: 2, height: 2), display: true)
-            // Ekran yeniden yapılandırılınca sistem gama tablosunu sıfırlar; yeniden uygula.
-            applied = 1
-        } else {
-            factor = 1
-            stop()
+    /// Ekran yeniden yapılandırıldığında ya da uyandığında sistem gama tablosunu sıfırlar; yeniden uygula.
+    @objc private func displayReset() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self else { return }
+            if self.window != nil, self.edrScreen == nil {
+                self.factor = 1
+                self.timer?.invalidate(); self.timer = nil
+                self.window?.orderOut(nil); self.window = nil
+                self.rendered = 1
+            }
+            guard !self.baseR.isEmpty else { return }
+            self.signature = ""
+            if self.timer == nil { self.applyTable(boost: 1) }
         }
     }
 }

@@ -1,0 +1,9 @@
+"NSAppleEventsUsageDescription" = "Ada sends commands to other apps to control music and to carry out what you ask the assistant to do.";
+"NSCalendarsFullAccessUsageDescription" = "Ada reads your calendar to show upcoming events and lets the assistant add events.";
+"NSRemindersFullAccessUsageDescription" = "Ada reads your reminders to show them and lets the assistant add reminders.";
+"NSLocationUsageDescription" = "Ada uses your location to show the local weather.";
+"NSLocationWhenInUseUsageDescription" = "Ada uses your location to show the local weather.";
+"NSCameraUsageDescription" = "Ada uses the camera for the Mirror module.";
+"NSMicrophoneUsageDescription" = "Ada uses the microphone so you can talk to the assistant.";
+"NSSpeechRecognitionUsageDescription" = "Ada uses speech recognition to turn what you say into text.";
+"NSBluetoothAlwaysUsageDescription" = "Ada uses Bluetooth to show connecting devices in the notch.";

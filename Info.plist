@@ -3,6 +3,8 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key><string>Ada</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>tr</string></array>
   <key>CFBundleDisplayName</key><string>Ada</string>
   <key>CFBundleIdentifier</key><string>app.ada.notch</string>
   <key>CFBundleExecutable</key><string>Ada</string>
@@ -12,14 +14,14 @@
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSAppleEventsUsageDescription</key><string>Ada, müziği kontrol etmek ve asistanın istediğiniz işlemleri yapabilmesi için diğer uygulamalara komut gönderir.</string>
-  <key>NSCalendarsFullAccessUsageDescription</key><string>Ada, yaklaşan etkinlikleri göstermek ve asistanın etkinlik ekleyebilmesi için takviminize erişir.</string>
-  <key>NSRemindersFullAccessUsageDescription</key><string>Ada, anımsatıcılarınızı göstermek ve asistanın anımsatıcı ekleyebilmesi için erişim ister.</string>
-  <key>NSLocationUsageDescription</key><string>Ada, bulunduğunuz yerin hava durumunu göstermek için konumunuzu kullanır.</string>
-  <key>NSLocationWhenInUseUsageDescription</key><string>Ada, bulunduğunuz yerin hava durumunu göstermek için konumunuzu kullanır.</string>
-  <key>NSCameraUsageDescription</key><string>Ada, Ayna modülünde kendinizi görebilmeniz için kamerayı kullanır.</string>
-  <key>NSMicrophoneUsageDescription</key><string>Ada, asistanla sesli konuşabilmeniz için mikrofonu kullanır.</string>
-  <key>NSSpeechRecognitionUsageDescription</key><string>Ada, söylediklerinizi yazıya çevirmek için konuşma tanımayı kullanır.</string>
-  <key>NSBluetoothAlwaysUsageDescription</key><string>Ada, bağlanan Bluetooth cihazlarını çentikte göstermek için Bluetooth'u kullanır.</string>
+  <key>NSAppleEventsUsageDescription</key><string>Ada sends commands to other apps to control music and to carry out what you ask the assistant to do.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>Ada reads your calendar to show upcoming events and lets the assistant add events.</string>
+  <key>NSRemindersFullAccessUsageDescription</key><string>Ada reads your reminders to show them and lets the assistant add reminders.</string>
+  <key>NSLocationUsageDescription</key><string>Ada uses your location to show the local weather.</string>
+  <key>NSLocationWhenInUseUsageDescription</key><string>Ada uses your location to show the local weather.</string>
+  <key>NSCameraUsageDescription</key><string>Ada uses the camera for the Mirror module.</string>
+  <key>NSMicrophoneUsageDescription</key><string>Ada uses the microphone so you can talk to the assistant.</string>
+  <key>NSSpeechRecognitionUsageDescription</key><string>Ada uses speech recognition to turn what you say into text.</string>
+  <key>NSBluetoothAlwaysUsageDescription</key><string>Ada uses Bluetooth to show connecting devices in the notch.</string>
 </dict>
 </plist>

@@ -2,6 +2,50 @@ import AppKit
 import Combine
 import SwiftUI
 
+// MARK: - Yerelleştirme
+//
+// Kaynak metinler Türkçedir; `Resources/en.lproj/Localizable.strings` İngilizce karşılıklarını tutar.
+
+/// Arayüz metnini uygulamanın diline çevirir.
+func L(_ key: String) -> String {
+    NSLocalizedString(key, comment: "")
+}
+
+/// Yer tutuculu (%@) metni çevirip değerleri yerleştirir.
+func Lf(_ key: String, _ args: String...) -> String {
+    String(format: NSLocalizedString(key, comment: ""), arguments: args)
+}
+
+/// Uygulamanın o an kullandığı dil kodu ("tr" ya da "en").
+let appLanguage: String = Bundle.main.preferredLocalizations.first ?? "en"
+let appLocale = Locale(identifier: appLanguage == "tr" ? "tr_TR" : "en_US")
+
+enum AppLanguage {
+    /// "system", "tr" ya da "en"
+    static var selection: String {
+        guard let langs = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String],
+              let first = langs.first else { return "system" }
+        return first.hasPrefix("tr") ? "tr" : "en"
+    }
+
+    /// Dili değiştirir ve Ada'yı yeniden başlatır.
+    static func set(_ code: String) {
+        guard code != selection else { return }
+        if code == "system" {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([code], forKey: "AppleLanguages")
+        }
+        UserDefaults.standard.synchronize()
+        let path = Bundle.main.bundlePath
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", "sleep 0.6; /usr/bin/open \"$0\"", path]
+        try? p.run()
+        NSApp.terminate(nil)
+    }
+}
+
 // MARK: - Modüller
 
 enum ModuleID: String, CaseIterable, Identifiable {
@@ -12,23 +56,23 @@ enum ModuleID: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .music: return "Müzik"
-        case .lyrics: return "Şarkı sözleri"
-        case .calendar: return "Takvim"
-        case .reminders: return "Anımsatıcılar"
-        case .weather: return "Hava durumu"
-        case .battery: return "Pil ve şarj"
-        case .bluetooth: return "Bluetooth bildirimleri"
-        case .hud: return "Ses ve parlaklık göstergesi"
-        case .xdr: return "Ekstra parlaklık (HDR)"
-        case .stats: return "Sistem istatistikleri"
-        case .shelf: return "Dosya rafı"
-        case .clipboard: return "Pano geçmişi"
-        case .timer: return "Zamanlayıcı"
-        case .notes: return "Hızlı not"
-        case .mirror: return "Ayna"
-        case .launcher: return "Uygulama başlatıcı"
-        case .assistant: return "Asistan"
+        case .music: return L("Müzik")
+        case .lyrics: return L("Şarkı sözleri")
+        case .calendar: return L("Takvim")
+        case .reminders: return L("Anımsatıcılar")
+        case .weather: return L("Hava durumu")
+        case .battery: return L("Pil ve şarj")
+        case .bluetooth: return L("Bluetooth bildirimleri")
+        case .hud: return L("Ses ve parlaklık göstergesi")
+        case .xdr: return L("Ekstra parlaklık (HDR)")
+        case .stats: return L("Sistem istatistikleri")
+        case .shelf: return L("Dosya rafı")
+        case .clipboard: return L("Pano geçmişi")
+        case .timer: return L("Zamanlayıcı")
+        case .notes: return L("Hızlı not")
+        case .mirror: return L("Ayna")
+        case .launcher: return L("Uygulama başlatıcı")
+        case .assistant: return L("Asistan")
         }
     }
 
@@ -56,23 +100,23 @@ enum ModuleID: String, CaseIterable, Identifiable {
 
     var detail: String {
         switch self {
-        case .music: return "Spotify ve Apple Music'te çalan parçayı gösterir, kontrol eder."
-        case .lyrics: return "Çalan parçanın sözlerini lrclib.net'ten getirir (parça ve sanatçı adı gönderilir)."
-        case .calendar: return "Yaklaşan etkinlikleri gösterir."
-        case .reminders: return "Tamamlanmamış anımsatıcıları gösterir."
-        case .weather: return "Konumunuza göre hava durumu (Open‑Meteo'ya yaklaşık konum gönderilir)."
-        case .battery: return "Pil yüzdesi ve şarja takma/çıkarma bildirimi."
-        case .bluetooth: return "Bir cihaz bağlandığında çentikte gösterir."
-        case .hud: return "Ses ve parlaklık tuşlarında macOS göstergesi yerine çentikte gösterge. Erişilebilirlik izni ister."
-        case .xdr: return "Parlaklık %100'deyken artırma tuşuna basmaya devam edince XDR ekranın HDR aralığını kullanır. Pili daha hızlı tüketir."
-        case .stats: return "İşlemci, bellek ve ağ kullanımı."
-        case .shelf: return "Dosyaları çentiğe sürükleyip bırakın, sonra istediğiniz yere taşıyın ya da AirDrop ile gönderin."
-        case .clipboard: return "Kopyaladığınız son metinleri saklar (yalnızca bu Mac'te)."
-        case .timer: return "Geri sayım; kalan süre kapalı çentikte görünür."
-        case .notes: return "Çentikte küçük bir not defteri."
-        case .mirror: return "Kamerayı ayna olarak kullanır."
-        case .launcher: return "Sık kullandığınız uygulamaları çentikten açın."
-        case .assistant: return "Claude ile sohbet; takvim, müzik ve Mac ayarlarını sizin için yönetir."
+        case .music: return L("Spotify ve Apple Music'te çalan parçayı gösterir, kontrol eder.")
+        case .lyrics: return L("Çalan parçanın sözlerini lrclib.net'ten getirir (parça ve sanatçı adı gönderilir).")
+        case .calendar: return L("Yaklaşan etkinlikleri gösterir.")
+        case .reminders: return L("Tamamlanmamış anımsatıcıları gösterir.")
+        case .weather: return L("Konumunuza göre hava durumu (Open‑Meteo'ya yaklaşık konum gönderilir).")
+        case .battery: return L("Pil yüzdesi ve şarja takma/çıkarma bildirimi.")
+        case .bluetooth: return L("Bir cihaz bağlandığında çentikte gösterir.")
+        case .hud: return L("Ses ve parlaklık tuşlarında macOS göstergesi yerine çentikte gösterge. Erişilebilirlik izni ister.")
+        case .xdr: return L("Parlaklık %100'deyken artırma tuşuna basmaya devam edince XDR ekranın HDR aralığını kullanır. Pili daha hızlı tüketir.")
+        case .stats: return L("İşlemci, bellek ve ağ kullanımı.")
+        case .shelf: return L("Dosyaları çentiğe sürükleyip bırakın, sonra istediğiniz yere taşıyın ya da AirDrop ile gönderin.")
+        case .clipboard: return L("Kopyaladığınız son metinleri saklar (yalnızca bu Mac'te).")
+        case .timer: return L("Geri sayım; kalan süre kapalı çentikte görünür.")
+        case .notes: return L("Çentikte küçük bir not defteri.")
+        case .mirror: return L("Kamerayı ayna olarak kullanır.")
+        case .launcher: return L("Sık kullandığınız uygulamaları çentikten açın.")
+        case .assistant: return L("Claude ile sohbet; takvim, müzik ve Mac ayarlarını sizin için yönetir.")
         }
     }
 }
@@ -113,6 +157,12 @@ final class Prefs: ObservableObject {
     @Published var pomodoroWork: Double { didSet { d.set(pomodoroWork, forKey: "pomodoroWork") } }
     @Published var pomodoroBreak: Double { didSet { d.set(pomodoroBreak, forKey: "pomodoroBreak") } }
     @Published var pinnedApps: [String] { didSet { d.set(pinnedApps, forKey: "pinnedApps") } }
+    @Published var theme: String { didSet { d.set(theme, forKey: "theme") } }
+    @Published var color1: String { didSet { d.set(color1, forKey: "color1") } }
+    @Published var color2: String { didSet { d.set(color2, forKey: "color2") } }
+    @Published var warmth: Double { didSet { d.set(warmth, forKey: "warmth"); tuningChanged() } }
+    @Published var contrast: Double { didSet { d.set(contrast, forKey: "contrast"); tuningChanged() } }
+    @Published var dim: Double { didSet { d.set(dim, forKey: "dim"); tuningChanged() } }
     @Published var memory: [String] { didSet { d.set(memory, forKey: "memory") } }
 
     private init() {
@@ -124,7 +174,7 @@ final class Prefs: ObservableObject {
         hotkey = d.object(forKey: "hotkey") as? Bool ?? true
         model = d.string(forKey: "model") ?? "claude-opus-5-5"
         speakReplies = d.object(forKey: "speakReplies") as? Bool ?? false
-        speechLocale = d.string(forKey: "speechLocale") ?? "tr-TR"
+        speechLocale = d.string(forKey: "speechLocale") ?? (appLanguage == "tr" ? "tr-TR" : "en-US")
         allowAppleScript = d.object(forKey: "allowAppleScript") as? Bool ?? false
         allowScreen = d.object(forKey: "allowScreen") as? Bool ?? false
         allowWeb = d.object(forKey: "allowWeb") as? Bool ?? true
@@ -143,6 +193,12 @@ final class Prefs: ObservableObject {
         effort = d.object(forKey: "effort") as? String ?? "low"
         customInstructions = d.object(forKey: "customInstructions") as? String ?? ""
         memory = d.stringArray(forKey: "memory") ?? []
+        theme = d.string(forKey: "theme") ?? "aurora"
+        color1 = d.string(forKey: "color1") ?? "#7B5CFF"
+        color2 = d.string(forKey: "color2") ?? "#00D4FF"
+        warmth = d.object(forKey: "warmth") as? Double ?? 0
+        contrast = d.object(forKey: "contrast") as? Double ?? 0
+        dim = d.object(forKey: "dim") as? Double ?? 0
         showMeeting = d.object(forKey: "showMeeting") as? Bool ?? true
         pomodoroWork = d.object(forKey: "pomodoroWork") as? Double ?? 25
         pomodoroBreak = d.object(forKey: "pomodoroBreak") as? Double ?? 5
@@ -154,9 +210,19 @@ final class Prefs: ObservableObject {
     }
 
     static let accents: [(id: String, name: String, color: Color)] = [
-        ("blue", "Mavi", .blue), ("purple", "Mor", .purple), ("pink", "Pembe", .pink), ("red", "Kırmızı", .red),
-        ("orange", "Turuncu", .orange), ("green", "Yeşil", .green), ("teal", "Camgöbeği", .teal), ("graphite", "Grafit", Color(white: 0.6)),
+        ("blue", L("Mavi"), .blue), ("purple", L("Mor"), .purple), ("pink", L("Pembe"), .pink), ("red", L("Kırmızı"), .red),
+        ("orange", L("Turuncu"), .orange), ("green", L("Yeşil"), .green), ("teal", L("Camgöbeği"), .teal), ("graphite", L("Grafit"), Color(white: 0.6)),
     ]
+    static let themes: [(id: String, name: String)] = [
+        ("aurora", "Aurora"), ("neon", "Neon"), ("gradient", L("Gradyan")), ("glass", L("Cam")), ("black", L("Siyah")),
+    ]
+    var themeColor1: Color { Color(hex: color1) ?? .purple }
+    var themeColor2: Color { Color(hex: color2) ?? .cyan }
+
+    private func tuningChanged() {
+        DispatchQueue.main.async { BoostService.shared.refresh() }
+    }
+
     var accentColor: Color { Self.accents.first { $0.id == accent }?.color ?? .blue }
 
     /// Sıcaklığı seçili birimde tam sayı olarak verir.
@@ -186,12 +252,12 @@ enum NotchTab: String, CaseIterable, Identifiable {
     }
     var title: String {
         switch self {
-        case .home: return "Ana"
-        case .assistant: return "Asistan"
-        case .tools: return "Araçlar"
-        case .shelf: return "Raf"
-        case .apps: return "Uygulamalar"
-        case .mirror: return "Ayna"
+        case .home: return L("Ana")
+        case .assistant: return L("Asistan")
+        case .tools: return L("Araçlar")
+        case .shelf: return L("Raf")
+        case .apps: return L("Uygulamalar")
+        case .mirror: return L("Ayna")
         }
     }
 }
@@ -273,6 +339,22 @@ final class NotchModel: ObservableObject {
 
 // MARK: - Yardımcılar
 
+extension Color {
+    /// "#RRGGBB" biçiminden renk.
+    init?(hex: String) {
+        var s = hex.trimmingCharacters(in: .whitespaces)
+        if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 6, let v = UInt32(s, radix: 16) else { return nil }
+        self = Color(red: Double((v >> 16) & 0xFF) / 255, green: Double((v >> 8) & 0xFF) / 255, blue: Double(v & 0xFF) / 255)
+    }
+
+    var hexString: String {
+        guard let c = NSColor(self).usingColorSpace(.sRGB) else { return "#FFFFFF" }
+        return String(format: "#%02X%02X%02X", Int((c.redComponent * 255).rounded()),
+                      Int((c.greenComponent * 255).rounded()), Int((c.blueComponent * 255).rounded()))
+    }
+}
+
 enum Shell {
     @discardableResult
     static func run(_ path: String, _ args: [String], timeout: TimeInterval = 15) -> (code: Int32, out: String) {
@@ -298,10 +380,10 @@ enum Script {
 
     static func runSync(_ source: String) -> (out: NSAppleEventDescriptor?, err: String?) {
         var error: NSDictionary?
-        guard let script = NSAppleScript(source: source) else { return (nil, "Betik oluşturulamadı") }
+        guard let script = NSAppleScript(source: source) else { return (nil, L("Betik oluşturulamadı")) }
         let result = script.executeAndReturnError(&error)
         if let error {
-            return (nil, (error[NSAppleScript.errorMessage] as? String) ?? "AppleScript hatası")
+            return (nil, (error[NSAppleScript.errorMessage] as? String) ?? L("AppleScript hatası"))
         }
         return (result, nil)
     }
@@ -340,6 +422,7 @@ final class ModuleManager {
 
     func start() {
         apply()
+        BoostService.shared.refresh()
         Prefs.shared.$modules
             .dropFirst()
             .receive(on: DispatchQueue.main)
