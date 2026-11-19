@@ -69,13 +69,11 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 2. Açın ve **Ada**'yı **Applications** klasörüne sürükleyin.
 3. Uygulamalar'dan Ada'yı açın.
 
-Ada henüz Apple tarafından onaylı (notarized) değil. İlk açılışta macOS "geliştiricisi doğrulanamadı" derse:
-**Sistem Ayarları › Gizlilik ve Güvenlik** bölümünün altındaki **"Yine de Aç"** düğmesine basın. Bu yalnızca ilk
-açılışta gerekir.
+Sürümler Apple tarafından onaylıdır (Developer ID ile imzalı ve notarized); macOS açılışta güvenlik uyarısı göstermez.
 
 ### 2. Tek komut
 
-Terminal'e yapıştırın; son sürümü indirir, Uygulamalar'a kurar ve açar (macOS uyarısı çıkmaz):
+Terminal'e yapıştırın; son sürümü indirir, Uygulamalar'a kurar ve açar:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yigitunalresmi/ada-notch/main/install.sh | bash
@@ -109,8 +107,7 @@ Otomatik kurulum isteğe bağlıdır ve kapalı gelir.
 
 Tüm sürümler ve değişiklik notları: [Releases](https://github.com/yigitunalresmi/ada-notch/releases).
 
-Hazır sürümler yerel (ad-hoc) imzalıdır. Bu yüzden macOS, her güncellemeden sonra Erişilebilirlik gibi bazı izinleri
-yeniden isteyebilir.
+v1.0.9 ve öncesi yerel imzalıydı; o sürümlerden güncelleyenlerden macOS izinleri bir kez daha isteyebilir.
 
 ## İzinler
 
@@ -206,9 +203,8 @@ weather, tools and an assistant that can operate your Mac for you.
 **Install:**
 
 - **Drag and drop:** download **Ada.dmg** from the [latest release](https://github.com/yigitunalresmi/ada-notch/releases/latest),
-  open it and drag Ada to Applications. Ada is not notarized yet: if macOS says the developer cannot be verified,
-  press **Open Anyway** in System Settings › Privacy & Security (first launch only).
-- **One command** (no macOS warning):
+  open it and drag Ada to Applications. Releases are signed with a Developer ID and notarized by Apple.
+- **One command:**
 
   ```bash
   curl -fsSL https://raw.githubusercontent.com/yigitunalresmi/ada-notch/main/install.sh | bash

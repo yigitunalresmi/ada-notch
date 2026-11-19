@@ -73,7 +73,11 @@ rm -rf "$STAGE"
 
 if [ -n "$NOTARY_PROFILE" ]; then
   echo "Apple onayı bekleniyor…"
-  xcrun notarytool submit dist/Ada.dmg --keychain-profile "$NOTARY_PROFILE" --wait
+  if ! xcrun notarytool submit dist/Ada.dmg --keychain-profile "$NOTARY_PROFILE" --wait; then
+    echo "Apple onayı beklenirken bağlantı koptu ya da onay reddedildi."
+    echo "Durumu görmek için: xcrun notarytool history --keychain-profile $NOTARY_PROFILE"
+    exit 1
+  fi
   xcrun stapler staple dist/Ada.dmg
   xcrun stapler staple "$APP"
 fi
@@ -83,6 +87,7 @@ ditto -c -k --keepParent "$APP" dist/Ada.zip
 echo "Hazır: dist/Ada.dmg, dist/Ada.zip  (sürüm $VERSION, mimariler: $(lipo -archs "$APP/Contents/MacOS/Ada"))"
 
 if [ "$1" = "publish" ]; then
+  git fetch -q --tags origin 2>/dev/null || true
   LAST=$(git describe --tags --abbrev=0 2>/dev/null || true)
   if [ -n "$LAST" ]; then NOTES=$(git log --format='- %s' "$LAST"..HEAD); else NOTES=$(git log --format='- %s' -n 12); fi
   gh release create "v$VERSION" dist/Ada.dmg dist/Ada.zip --title "Ada $VERSION" --notes "$NOTES"
