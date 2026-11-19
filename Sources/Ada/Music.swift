@@ -42,13 +42,13 @@ final class MusicService: ObservableObject {
     func currentLyric(at pos: Double) -> String? {
         guard !lyrics.isEmpty else { return nil }
         var line: String?
-        for l in lyrics where l.time <= pos + 0.2 { line = l.text }
+        for l in lyrics where l.time <= pos + 0.2 + Opt.num("lyrics.offset") { line = l.text }
         return line
     }
 
     func setEnabled(_ on: Bool) {
         if on, timer == nil {
-            let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.poll() }
+            let t = Timer(timeInterval: max(0.5, Opt.num("music.poll")), repeats: true) { [weak self] _ in self?.poll() }
             RunLoop.main.add(t, forMode: .common)
             timer = t
             poll()
@@ -57,6 +57,15 @@ final class MusicService: ObservableObject {
             timer = nil
             clear()
         }
+    }
+
+    /// Yenileme aralığı değiştiğinde çalan parçayı silmeden zamanlayıcıyı yeniler.
+    func restartTimer() {
+        guard timer != nil else { return }
+        timer?.invalidate()
+        let t = Timer(timeInterval: max(0.5, Opt.num("music.poll")), repeats: true) { [weak self] _ in self?.poll() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     private func clear() {
@@ -84,7 +93,9 @@ final class MusicService: ObservableObject {
     private func poll() {
         guard !busy else { return }
         let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
-        let candidates = [Player.spotify, .music].filter { running.contains($0.rawValue) }
+        let order: [Player] = Opt.str("music.prefer") == "music" ? [.music, .spotify] : [.spotify, .music]
+        let pinned = Opt.str("music.prefer") != "auto"
+        let candidates = order.filter { running.contains($0.rawValue) }
         guard !candidates.isEmpty else {
             if player != nil { clear() }
             return
@@ -96,7 +107,8 @@ final class MusicService: ObservableObject {
                 guard let out = Script.runSync(self.statusScript(p)).out?.stringValue else { continue }
                 let parts = out.components(separatedBy: Self.sep)
                 guard parts.count >= 7 else { continue }
-                if parts[0] == "playing" { best = (p, parts); break }
+                // Öncelikli oynatıcı seçiliyse, parçası olduğu sürece hep o kullanılır.
+                if parts[0] == "playing" || (pinned && best == nil) { best = (p, parts); break }
                 if best == nil { best = (p, parts) }
             }
             DispatchQueue.main.async {
@@ -126,6 +138,9 @@ final class MusicService: ObservableObject {
 
         let key = "\(p.rawValue)|\(parts[1])|\(parts[2])"
         if key != trackKey {
+            if !trackKey.isEmpty, playing, Opt.flag("music.trackHUD"), !NotchModel.shared.expanded {
+                NotchModel.shared.showHUD(HUDInfo(icon: "music.note", title: parts[1], leftText: parts[2], wide: true, tint: .green), seconds: 3)
+            }
             trackKey = key
             artwork = nil
             lyrics = []
@@ -228,11 +243,11 @@ struct MusicCard: View {
     var body: some View {
         if music.hasTrack {
             GeometryReader { geo in
-                let side = min(geo.size.height, 112)
+                let side = min(geo.size.height, Opt.num("music.artSize"))
                 HStack(spacing: 14) {
                     ArtworkView(image: music.artwork, size: side, radius: 16)
                         .shadow(color: .black.opacity(0.5), radius: 8, y: 4)
-                        .scaleEffect(music.isPlaying ? 1 : 0.92)
+                        .scaleEffect(music.isPlaying || !Opt.flag("music.shrink") ? 1 : 0.92)
                         .id(music.title + music.artist + (music.artwork == nil ? "0" : "1"))
                         .transition(.blurReplace)
                         .animation(.spring(response: 0.45, dampingFraction: 0.7), value: music.isPlaying)
@@ -246,7 +261,7 @@ struct MusicCard: View {
                                 if prefs.isOn(.lyrics), let line = music.currentLyric(at: pos), !line.isEmpty {
                                     Text(line)
                                         .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(.green)
+                                        .foregroundStyle(Opt.flag("lyrics.accent") ? prefs.accentColor : Color.green)
                                         .lineLimit(1)
                                         .id(line)
                                         .transition(.opacity)

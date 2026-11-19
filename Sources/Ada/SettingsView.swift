@@ -131,9 +131,9 @@ struct ModulesSettings: View {
     @ObservedObject var prefs = Prefs.shared
 
     private let groups: [(String, Color, [ModuleID])] = [
-        (L("Ana sekme"), .pink, [.music, .lyrics, .calendar, .reminders, .weather, .ticker]),
+        (L("Ana sekme"), .pink, [.music, .lyrics, .calendar, .reminders, .weather, .ticker, .clocks]),
         (L("Canlı bildirimler ve ekran"), .orange, [.battery, .bluetooth, .hud, .xdr, .privacy, .network, .downloads]),
-        (L("Araçlar"), .blue, [.timer, .clipboard, .notes, .stats, .shelf, .screenshots, .launcher, .mirror]),
+        (L("Araçlar"), .blue, [.timer, .breaks, .clipboard, .notes, .stats, .shelf, .screenshots, .launcher, .mirror]),
         (L("Asistan"), .purple, [.assistant]),
         (L("Gelişmiş (ek izin gerektirir)"), .gray, [.focus, .notifications, .visualizer, .lockscreen]),
     ]
@@ -175,6 +175,7 @@ struct ModuleCard: View {
     var color: Color
     @ObservedObject var prefs = Prefs.shared
     @State private var hover = false
+    @State private var showOptions = false
 
     var body: some View {
         let on = prefs.isOn(module)
@@ -190,7 +191,20 @@ struct ModuleCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
-            Toggle("", isOn: prefs.binding(module)).labelsHidden().toggleStyle(.switch).controlSize(.small)
+            VStack(alignment: .trailing, spacing: 8) {
+                Toggle("", isOn: prefs.binding(module)).labelsHidden().toggleStyle(.switch).controlSize(.small)
+                if Opt.all[module] != nil {
+                    Button { showOptions = true } label: {
+                        Image(systemName: "slider.horizontal.3").font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 26, height: 20)
+                            .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .help(L("İnce ayarlar"))
+                    .popover(isPresented: $showOptions, arrowEdge: .trailing) { ModuleOptionsView(module: module) }
+                }
+            }
         }
         .padding(10)
         .frame(maxWidth: .infinity, minHeight: 74, alignment: .topLeading)
@@ -564,6 +578,19 @@ struct AppearanceSettings: View {
                 Text(L("Tema"))
             } footer: {
                 Text(L("Saydamlık arttıkça arkadaki içerik daha net görünür; parlak arka planlarda yazıların okunması zorlaşabilir."))
+            }
+
+            Section {
+                HStack {
+                    Text(L("Siyahın aşağı uzanması"))
+                    Slider(value: $prefs.notchBlend, in: 0...1)
+                    Text("%\(Int((prefs.notchBlend * 100).rounded()))").monospacedDigit().frame(width: 48, alignment: .trailing)
+                }
+                Toggle(L("Kapalı çentikte kenarı yumuşat"), isOn: $prefs.wingFeather)
+            } header: {
+                Text(L("Çentikle birleşme"))
+            } footer: {
+                Text(L("Ada'nın çizdiği siyah tam siyahtır; yine de ekranın arka ışığı yüzünden fiziksel çentikten biraz daha açık görünebilir. Bu fark parlaklık yükseldikçe ve ekstra (HDR) parlaklık açıkken artar."))
             }
 
             Section(L("Boyut")) {

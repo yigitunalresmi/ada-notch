@@ -12,11 +12,13 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 - Takvim ve anımsatıcılar; görüntülü toplantılar için "Katıl" düğmesi
 - Konuma göre hava durumu; tıklayınca saatlik tahmin
 - Piyasa takibi: seçtiğiniz kripto fiyatları (isteğe bağlı)
+- Dünya saatleri: seçtiğiniz şehirlerin saati
 
 **Kapalı çentikte canlı göstergeler**
 - Çalan parça, zamanlayıcının kalan süresi, bir saat içindeki toplantıya geri sayım
 - Ses ve parlaklık tuşlarında macOS göstergesi yerine çentik göstergesi
 - XDR ekranlarda %100'ün üstünde ekstra (HDR) parlaklık
+- Şarj hedefi bildirimi (ör. %80 olunca haber ver), parça değişince bildirim
 - Şarja takma/çıkarma (adaptör gücüyle) ve Bluetooth cihazı bağlanma bildirimleri; kulaklık pil düzeyi
 - Bir uygulama kamerayı ya da mikrofonu kullanırken nokta göstergesi
 - İnternet kesildi / geri geldi / ağ değişti bildirimleri, Caps Lock göstergesi
@@ -28,7 +30,7 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 - Kilit ekranında görünme — deneysel
 
 **Araçlar**
-- Zamanlayıcı ve Pomodoro, pano geçmişi, hızlı not, işlemci/bellek/ağ
+- Zamanlayıcı (hazır süreler ayarlanabilir) ve Pomodoro, mola hatırlatıcı, pano geçmişi, hızlı not, işlemci/bellek/ağ
 - Hızlı işlemler: görünüm, uyanık tut, ekran alıntısı, sessiz, renk seçici, ekranı uyut, ses çıkışı seçimi
 - Dosya rafı (sürükle-bırak, AirDrop; isteğe bağlı olarak yeni ekran görüntüleri kendiliğinden eklenir), uygulama başlatıcı, ayna
 
@@ -49,7 +51,9 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 - Ekran iyileştirme: renk sıcaklığı, kontrast ve en düşük parlaklığın altına inen ek karartma
 
 **Ayarlar**
-- Her modül tek tek açılıp kapatılabilir
+- Her modül tek tek açılıp kapatılabilir; modül kartındaki ince ayar düğmesiyle o modüle özel ayarlar açılır
+  (yenileme aralıkları, gösterilecek öğe sayıları, bildirim eşikleri, boyutlar ve daha fazlası)
+- Açık çentikte siyahın ne kadar aşağı uzanacağı ayarlanabilir; çentik büyüyormuş gibi görünür
 - Türkçe ve İngilizce arayüz (Ayarlar › Genel › Dil)
 
 ## Gereksinimler

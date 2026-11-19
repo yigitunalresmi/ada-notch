@@ -89,7 +89,7 @@ final class AgendaService: ObservableObject {
         let end = Calendar.current.date(byAdding: .day, value: max(1, days), to: Calendar.current.startOfDay(for: now))!
         let pred = store.predicateForEvents(withStart: now.addingTimeInterval(-3600), end: end, calendars: nil)
         return store.events(matching: pred)
-            .filter { $0.endDate > now }
+            .filter { $0.endDate > now && (Opt.flag("calendar.allDay") || !$0.isAllDay) }
             .sorted { $0.startDate < $1.startDate }
             .map {
                 AgendaEvent(id: $0.eventIdentifier ?? UUID().uuidString, title: $0.title ?? L("(Başlıksız)"),
@@ -126,9 +126,9 @@ final class AgendaService: ObservableObject {
 
     func refresh() {
         if eventsOn {
-            events = fetchEvents(days: 3)
+            events = fetchEvents(days: max(1, Int(Opt.num("calendar.days"))))
             let now = Date()
-            next = events.first { !$0.allDay && $0.start > now.addingTimeInterval(-300) && $0.start < now.addingTimeInterval(3600) }
+            next = events.first { !$0.allDay && $0.start > now.addingTimeInterval(-300) && $0.start < now.addingTimeInterval(Opt.num("calendar.lead") * 60) }
         } else {
             next = nil
         }
@@ -236,7 +236,7 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
             manager.desiredAccuracy = kCLLocationAccuracyKilometer
             manager.requestWhenInUseAuthorization()
             manager.requestLocation()
-            let t = Timer(timeInterval: 20 * 60, repeats: true) { [weak self] _ in self?.manager.requestLocation() }
+            let t = Timer(timeInterval: max(600, Opt.num("weather.refresh") * 60), repeats: true) { [weak self] _ in self?.manager.requestLocation() }
             RunLoop.main.add(t, forMode: .common)
             timer = t
         } else {
@@ -326,6 +326,7 @@ struct AgendaColumn: View {
                     .help(L("Saatlik tahmin için tıklayın"))
             }
             if prefs.isOn(.ticker) { TickerRow() }
+            if prefs.isOn(.clocks) { ClocksRow() }
             if showForecast, prefs.isOn(.weather) {
                 ForecastStrip().transition(.blurReplace)
             }
@@ -337,7 +338,7 @@ struct AgendaColumn: View {
                     } else if agenda.events.isEmpty {
                         hint(L("Yaklaşan etkinlik yok"))
                     } else {
-                        ForEach(agenda.events.prefix(prefs.isOn(.reminders) ? (tall ? 3 : 1) : (tall ? 5 : 3))) { e in
+                        ForEach(agenda.events.prefix(max(1, Int(Opt.num("calendar.count"))))) { e in
                             HStack(spacing: 7) {
                                 Capsule().fill(e.color).frame(width: 3, height: 26)
                                 VStack(alignment: .leading, spacing: 1) {
@@ -362,7 +363,7 @@ struct AgendaColumn: View {
                     } else if agenda.reminders.isEmpty {
                         hint(L("Bekleyen anımsatıcı yok"))
                     } else {
-                        ForEach(agenda.reminders.prefix(prefs.isOn(.calendar) ? (tall ? 2 : 1) : (tall ? 5 : 3))) { r in
+                        ForEach(agenda.reminders.filter { !Opt.flag("reminders.onlyDue") || $0.due != nil }.prefix(max(1, Int(Opt.num("reminders.count"))))) { r in
                             HStack(spacing: 6) {
                                 Image(systemName: "circle").font(.system(size: 10)).foregroundStyle(.orange)
                                 Text(r.title).font(.system(size: 12)).lineLimit(1)

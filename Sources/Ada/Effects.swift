@@ -167,7 +167,7 @@ struct ForecastStrip: View {
                 Text(L("Tahmin yükleniyor…")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
             } else {
                 HStack(spacing: 0) {
-                    ForEach(Array(weather.hourly.prefix(6).enumerated()), id: \.element.id) { index, h in
+                    ForEach(Array(weather.hourly.prefix(max(4, Int(Opt.num("weather.hours")))).enumerated()), id: \.element.id) { index, h in
                         VStack(spacing: 3) {
                             Text(hour(h.time)).font(.system(size: 9.5)).foregroundStyle(.white.opacity(0.5))
                             Image(systemName: WeatherNow(temperature: 0, code: h.code, isDay: h.isDay, place: "").symbol)
@@ -175,7 +175,7 @@ struct ForecastStrip: View {
                                 .font(.system(size: 15))
                                 .frame(height: 18)
                             Text("\(prefs.temp(h.temperature))°").font(.system(size: 11.5, weight: .semibold))
-                            Text(h.rain > 0 ? "%\(h.rain)" : " ").font(.system(size: 9)).foregroundStyle(.cyan)
+                            Text(h.rain > 0 && Opt.flag("weather.rain") ? "%\(h.rain)" : " ").font(.system(size: 9)).foregroundStyle(.cyan)
                         }
                         .frame(maxWidth: .infinity)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -228,8 +228,10 @@ final class ScreenshotWatcher: NSObject {
             DispatchQueue.main.async {
                 guard Prefs.shared.isOn(.shelf) else { return }
                 if !ShelfService.shared.items.contains(url) { ShelfService.shared.items.append(url) }
-                NotchModel.shared.showHUD(HUDInfo(icon: "camera.viewfinder", title: L("Rafa eklendi"),
-                                                  image: NSImage(contentsOf: url), leftText: L("Ekran görüntüsü"), wide: true), seconds: 2.8)
+                if Opt.flag("screenshots.hud") {
+                    NotchModel.shared.showHUD(HUDInfo(icon: "camera.viewfinder", title: L("Rafa eklendi"),
+                                                      image: NSImage(contentsOf: url), leftText: L("Ekran görüntüsü"), wide: true), seconds: 2.8)
+                }
             }
         }
     }

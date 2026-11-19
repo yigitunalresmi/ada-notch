@@ -72,7 +72,7 @@ final class MediaKeyTap {
         let key = (e.data1 & 0xFFFF_0000) >> 16
         let down = ((e.data1 & 0xFF00) >> 8) == 0xA
         let fine = e.modifierFlags.contains([.option, .shift])
-        let step: Float = fine ? 1.0 / 64 : 1.0 / 16
+        let step: Float = fine ? 1.0 / 64 : 1.0 / Float(max(8, Opt.num("hud.steps")))
 
         switch key {
         case 0, 1, 7: // ses aç, ses kıs, sessiz
@@ -174,7 +174,7 @@ final class BoostService: ObservableObject {
 
     /// Ekstra parlaklık hedefi. 1.0 = normal; en fazla `maxFactor`.
     @Published private(set) var factor: Double = 1.0
-    let step = 0.1
+    var step: Double { max(0.05, Opt.num("xdr.step")) }
 
     private var window: BoostWindow?
     private var timer: Timer?

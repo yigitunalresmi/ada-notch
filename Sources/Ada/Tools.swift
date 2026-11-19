@@ -135,6 +135,12 @@ final class CountdownService: ObservableObject {
     private var end = Date()
     private var timer: Timer?
 
+    /// Ayarlardaki hazır süreler (dakika); geçersizse varsayılanlar.
+    static var presets: [Int] {
+        let list = Opt.list("timer.presets").compactMap { Int($0) }.filter { $0 > 0 && $0 <= 600 }
+        return list.isEmpty ? [5, 15, 25, 45] : Array(list.prefix(6))
+    }
+
     /// Odak ve mola sürelerini sırayla, durdurulana kadar tekrarlar.
     func startPomodoro() {
         begin(minutes: Prefs.shared.pomodoroWork, label: L("Odak"))
@@ -172,7 +178,7 @@ final class CountdownService: ObservableObject {
             if Prefs.shared.timerSound { NSSound(named: "Glass")?.play() }
             if pomodoro {
                 working.toggle()
-                if !working { NotchModel.shared.celebration += 1 }
+                if !working { if Opt.flag("timer.confetti") { NotchModel.shared.celebration += 1 } }
                 NotchModel.shared.showHUD(HUDInfo(icon: working ? "brain.head.profile" : "cup.and.saucer.fill",
                                                   title: working ? L("Odak zamanı") : L("Mola zamanı"), tint: .orange), seconds: 5)
                 begin(minutes: working ? Prefs.shared.pomodoroWork : Prefs.shared.pomodoroBreak, label: working ? L("Odak") : L("Mola"))
@@ -180,7 +186,7 @@ final class CountdownService: ObservableObject {
             }
             let name = label.isEmpty ? L("Süre doldu") : Lf("%@ · süre doldu", "\(label)")
             stop()
-            NotchModel.shared.celebration += 1
+            if Opt.flag("timer.confetti") { NotchModel.shared.celebration += 1 }
             NotchModel.shared.showHUD(HUDInfo(icon: "bell.fill", title: name, tint: .orange), seconds: 5)
         }
     }
@@ -231,7 +237,7 @@ struct ToolsView: View {
                 Button(L("Durdur")) { countdown.stop() }.buttonStyle(PillButtonStyle(tint: .red.opacity(0.6)))
             } else {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                    ForEach([5, 15, 25, 45], id: \.self) { m in
+                    ForEach(CountdownService.presets, id: \.self) { m in
                         Button(Lf("%@ dk", "\(m)")) { countdown.start(minutes: Double(m)) }
                             .buttonStyle(PillButtonStyle())
                             .frame(maxWidth: .infinity)
@@ -275,7 +281,7 @@ struct ToolsView: View {
         VStack(alignment: .leading, spacing: 6) {
             SectionTitle(text: L("Not"))
             TextEditor(text: $notes.text)
-                .font(.system(size: 12))
+                .font(.system(size: Opt.num("notes.font")))
                 .scrollContentBackground(.hidden)
                 .padding(6)
                 .glassCard(RoundedRectangle(cornerRadius: 9, style: .continuous))
@@ -285,7 +291,9 @@ struct ToolsView: View {
     private var statsRow: some View {
         HStack(spacing: 16) {
             stat("cpu", L("İşlemci"), "%\(Int((stats.cpu * 100).rounded()))")
-            Sparkline(values: stats.cpuHistory).frame(width: 46, height: 12).padding(.leading, -8)
+            if Opt.flag("stats.graph") {
+                Sparkline(values: stats.cpuHistory).frame(width: 46, height: 12).padding(.leading, -8)
+            }
             stat("memorychip", L("Bellek"), String(format: "%.1f / %.0f GB", stats.memUsed / 1_073_741_824, stats.memTotal / 1_073_741_824))
             stat("arrow.down", L("İndirme"), StatsService.rate(stats.netDown))
             stat("arrow.up", L("Yükleme"), StatsService.rate(stats.netUp))
@@ -355,7 +363,7 @@ final class CameraPreviewNSView: NSView {
         CATransaction.setDisableActions(true)
         preview.setAffineTransform(.identity)
         preview.frame = bounds
-        preview.setAffineTransform(CGAffineTransform(scaleX: -1, y: 1)) // ayna görüntüsü
+        preview.setAffineTransform(CGAffineTransform(scaleX: Opt.flag("mirror.flip") ? -1 : 1, y: 1)) // ayna görüntüsü
         CATransaction.commit()
     }
 }
@@ -375,7 +383,7 @@ struct MirrorView: View {
             } else {
                 CameraPreview()
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .frame(width: 400)
+                    .frame(width: Opt.num("mirror.width"))
             }
         }
         .onAppear { camera.start() }

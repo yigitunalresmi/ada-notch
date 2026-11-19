@@ -53,9 +53,10 @@ enum ModuleID: String, CaseIterable, Identifiable {
     case shelf, clipboard, timer, notes, mirror, launcher, assistant
     case privacy, downloads, network, ticker
     case focus, notifications, visualizer, lockscreen, screenshots
+    case clocks, breaks
 
     /// İzin penceresi açtığı ya da dışarıya istek gönderdiği için kapalı gelen modüller.
-    static let defaultOff: Set<ModuleID> = [.downloads, .ticker, .focus, .notifications, .visualizer, .lockscreen, .screenshots]
+    static let defaultOff: Set<ModuleID> = [.downloads, .ticker, .focus, .notifications, .visualizer, .lockscreen, .screenshots, .breaks]
 
     var id: String { rawValue }
 
@@ -86,6 +87,8 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .visualizer: return L("Gerçek ses görselleştirici")
         case .lockscreen: return L("Kilit ekranında görün")
         case .screenshots: return L("Ekran görüntülerini rafa ekle")
+        case .clocks: return L("Dünya saatleri")
+        case .breaks: return L("Mola hatırlatıcı")
         case .assistant: return L("Asistan")
         }
     }
@@ -117,6 +120,8 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .visualizer: return "waveform"
         case .lockscreen: return "lock.fill"
         case .screenshots: return "camera.viewfinder"
+        case .clocks: return "globe"
+        case .breaks: return "figure.walk"
         case .assistant: return "sparkles"
         }
     }
@@ -148,6 +153,8 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .visualizer: return L("Müzik çalarken ekolayzır çubukları gerçek sese göre hareket eder. Sistem sesini dinleme izni ister; ses kaydedilmez.")
         case .lockscreen: return L("Ada'yı kilit ekranında da gösterir. Deneyseldir; kapatmak için Ada'yı yeniden başlatın.")
         case .screenshots: return L("Yeni aldığınız ekran görüntüleri kendiliğinden dosya rafına eklenir.")
+        case .clocks: return L("Seçtiğiniz şehirlerin saatini Ana sekmede gösterir.")
+        case .breaks: return L("Belirlediğiniz süre kesintisiz çalıştığınızda mola vermenizi hatırlatır.")
         case .assistant: return L("Claude ile sohbet; takvim, müzik ve Mac ayarlarını sizin için yönetir.")
         }
     }
@@ -200,6 +207,12 @@ final class Prefs: ObservableObject {
     @Published var tickerSymbols: String { didSet { d.set(tickerSymbols, forKey: "tickerSymbols"); DispatchQueue.main.async { TickerService.shared.fetch() } } }
     @Published var autoCheckUpdates: Bool { didSet { d.set(autoCheckUpdates, forKey: "autoCheckUpdates") } }
     @Published var autoInstallUpdates: Bool { didSet { d.set(autoInstallUpdates, forKey: "autoInstallUpdates") } }
+    /// Modül başına ince ayarlar (bkz. Options.swift).
+    @Published var options: [String: Any] { didSet { d.set(options, forKey: "options"); ModuleManager.shared.optionsChanged() } }
+    /// Açık çentikte siyahın ne kadar aşağıya uzandığı (0…1).
+    @Published var notchBlend: Double { didSet { d.set(notchBlend, forKey: "notchBlend") } }
+    /// Kapalı çentiğin kanatlarında yumuşak siyah kenar.
+    @Published var wingFeather: Bool { didSet { d.set(wingFeather, forKey: "wingFeather") } }
     @Published var memory: [String] { didSet { d.set(memory, forKey: "memory") } }
 
     private init() {
@@ -232,6 +245,9 @@ final class Prefs: ObservableObject {
         effort = d.object(forKey: "effort") as? String ?? "low"
         customInstructions = d.object(forKey: "customInstructions") as? String ?? ""
         memory = d.stringArray(forKey: "memory") ?? []
+        options = d.dictionary(forKey: "options") ?? [:]
+        notchBlend = d.object(forKey: "notchBlend") as? Double ?? 0.6
+        wingFeather = d.object(forKey: "wingFeather") as? Bool ?? true
         autoCheckUpdates = d.object(forKey: "autoCheckUpdates") as? Bool ?? true
         autoInstallUpdates = d.object(forKey: "autoInstallUpdates") as? Bool ?? false
         tickerSymbols = d.string(forKey: "tickerSymbols") ?? "BTCUSDT, ETHUSDT"
@@ -486,8 +502,36 @@ final class ModuleManager {
             .store(in: &bag)
     }
 
+    private var optionsWork: DispatchWorkItem?
+    private var intervals: [String: Double] = [:]
+    private static let intervalKeys = ["music.poll", "weather.refresh", "ticker.refresh", "stats.interval"]
+
+    /// Bir ince ayar değiştiğinde: aralığı değişen servisleri yeniden başlatır, gerisi değerleri anında okur.
+    func optionsChanged() {
+        optionsWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            let p = Prefs.shared
+            var changed = Set<String>()
+            for key in Self.intervalKeys {
+                let v = Opt.num(key)
+                if let old = self.intervals[key], old != v { changed.insert(key) }
+                self.intervals[key] = v
+            }
+            if changed.contains("music.poll") { MusicService.shared.restartTimer() }
+            if changed.contains("weather.refresh"), p.isOn(.weather) { WeatherService.shared.setEnabled(false); WeatherService.shared.setEnabled(true) }
+            if changed.contains("ticker.refresh"), p.isOn(.ticker) { TickerService.shared.setEnabled(false); TickerService.shared.setEnabled(true) }
+            if changed.contains("stats.interval"), p.isOn(.stats) { StatsService.shared.setEnabled(false); StatsService.shared.setEnabled(true) }
+            AgendaService.shared.refresh()
+            self.apply()
+        }
+        optionsWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+    }
+
     func apply() {
         let p = Prefs.shared
+        if intervals.isEmpty { for key in Self.intervalKeys { intervals[key] = Opt.num(key) } }
         MusicService.shared.setEnabled(p.isOn(.music))
         AgendaService.shared.setEnabled(events: p.isOn(.calendar), reminders: p.isOn(.reminders))
         WeatherService.shared.setEnabled(p.isOn(.weather))
@@ -502,7 +546,9 @@ final class ModuleManager {
         DownloadsService.shared.setEnabled(p.isOn(.downloads))
         NetworkService.shared.setEnabled(p.isOn(.network))
         TickerService.shared.setEnabled(p.isOn(.ticker))
-        CapsLockMonitor.shared.setEnabled(p.isOn(.hud))
+        CapsLockMonitor.shared.setEnabled(p.isOn(.hud) && Opt.flag("hud.caps"))
+        BreakReminder.shared.setEnabled(p.isOn(.breaks))
+        AudioVisualizer.gainScale = Float(Opt.num("visualizer.gain"))
         FocusService.shared.setEnabled(p.isOn(.focus))
         NotificationWatcher.shared.setEnabled(p.isOn(.notifications))
         AudioVisualizer.shared.setEnabled(p.isOn(.visualizer) && p.isOn(.music))

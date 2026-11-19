@@ -17,6 +17,7 @@ final class BatteryService: ObservableObject {
     private var source: CFRunLoopSource?
     private var enabled = false
     private var primed = false
+    private var chargeNotified = false
 
     var symbol: String {
         if onAC { return "battery.100.bolt" }
@@ -77,13 +78,22 @@ final class BatteryService: ObservableObject {
             level = cap
             onAC = ac
             charging = chg
-            if primed, ac != wasAC {
+            if primed, ac != wasAC, Opt.flag("battery.plugHUD") {
                 NotchModel.shared.showHUD(HUDInfo(
                     icon: ac ? "bolt.fill" : "battery.75",
                     title: ac ? Lf("Şarj oluyor · %%%@", "\(cap)") + Self.adapterWatts() : Lf("Pilde · %%%@", "\(cap)"),
                     tint: ac ? .green : .white), seconds: 2.6)
             }
-            if primed, !ac, cap == 20 || cap == 10 {
+            // Şarj hedefi: belirlenen düzeye ulaşınca bir kez haber ver.
+            let target = Int(Opt.num("battery.notifyAt"))
+            if !ac || cap < target { chargeNotified = false }
+            if primed, ac, target > 0, cap >= target, !chargeNotified {
+                chargeNotified = true
+                NSSound(named: "Glass")?.play()
+                NotchModel.shared.showHUD(HUDInfo(icon: "battery.100.bolt", title: Lf("Şarj %%%@ oldu — fişi çekebilirsiniz", "\(cap)"),
+                                                  wide: true, tint: .green), seconds: 5)
+            }
+            if primed, !ac, cap == Int(Opt.num("battery.low")) || cap == 10 {
                 NotchModel.shared.showHUD(HUDInfo(icon: "battery.25", title: Lf("Pil azaldı · %%%@", "\(cap)"), tint: .red), seconds: 3)
             }
             primed = true
@@ -119,7 +129,7 @@ final class BluetoothService: NSObject {
         }
         // Pil düzeyi birkaç saniye sonra hazır olur; ayrı bir bildirimle göster.
         DispatchQueue.global().asyncAfter(deadline: .now() + 3.2) {
-            guard let levels = BluetoothBattery.levels(for: name) else { return }
+            guard Opt.flag("bluetooth.battery"), let levels = BluetoothBattery.levels(for: name) else { return }
             DispatchQueue.main.async {
                 NotchModel.shared.showHUD(HUDInfo(icon: Self.icon(for: name), title: levels, tint: .green), seconds: 3.2)
             }
@@ -128,7 +138,7 @@ final class BluetoothService: NSObject {
 
     @objc private func disconnected(_ n: IOBluetoothUserNotification, device: IOBluetoothDevice) {
         n.unregister()
-        guard note != nil else { return }
+        guard note != nil, Opt.flag("bluetooth.disconnect") else { return }
         let name = device.name ?? L("Bluetooth cihazı")
         DispatchQueue.main.async {
             NotchModel.shared.showHUD(HUDInfo(icon: Self.icon(for: name), title: Lf("%@ ayrıldı", "\(name)"), tint: .gray), seconds: 2.2)
@@ -309,7 +319,7 @@ final class HUDService {
     func showVolume(_ v: Float, muted isMuted: Bool) {
         let muted = isMuted || v < 0.005
         let icon = muted ? "speaker.slash.fill" : (v < 0.34 ? "speaker.wave.1.fill" : (v < 0.67 ? "speaker.wave.2.fill" : "speaker.wave.3.fill"))
-        NotchModel.shared.showHUD(HUDInfo(icon: icon, title: L("Ses"), value: muted ? 0 : Double(v)), seconds: 1.6)
+        NotchModel.shared.showHUD(HUDInfo(icon: icon, title: L("Ses"), value: muted ? 0 : Double(v)), seconds: Opt.num("hud.duration"))
     }
 
     private func pollBrightness() {
@@ -323,7 +333,7 @@ final class HUDService {
 
     func showBrightness(_ b: Float) {
         lastBrightness = b
-        NotchModel.shared.showHUD(HUDInfo(icon: "sun.max.fill", title: L("Parlaklık"), value: Double(b), tint: .yellow), seconds: 1.6)
+        NotchModel.shared.showHUD(HUDInfo(icon: "sun.max.fill", title: L("Parlaklık"), value: Double(b), tint: .yellow), seconds: Opt.num("hud.duration"))
     }
 
     func showBoost() {
@@ -356,7 +366,7 @@ final class StatsService: ObservableObject {
 
     func setEnabled(_ on: Bool) {
         if on, timer == nil {
-            let t = Timer(timeInterval: 2, repeats: true) { [weak self] _ in self?.sample() }
+            let t = Timer(timeInterval: max(1, Opt.num("stats.interval")), repeats: true) { [weak self] _ in self?.sample() }
             RunLoop.main.add(t, forMode: .common)
             timer = t
             sample()

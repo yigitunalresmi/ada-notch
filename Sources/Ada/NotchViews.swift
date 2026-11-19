@@ -50,6 +50,8 @@ struct NotchRootView: View {
                     shape.stroke(prefs.accentColor.opacity(model.dropTargeted ? 0.9 : 0), lineWidth: 2)
                 )
                 .shadow(color: glow.opacity(model.expanded ? (glassy ? 0.38 : 0.45) : 0), radius: 20, y: 10)
+                // Kapalıyken kanatların kenarını yumuşatır: parlak menü çubuğuyla siyah arasındaki sınır keskin görünmez.
+                .shadow(color: .black.opacity(!model.expanded && prefs.wingFeather && size.width > model.notchSize.width + 1 ? 0.7 : 0), radius: 5, y: 1)
             Group {
                 if model.expanded {
                     ExpandedView()
@@ -67,11 +69,11 @@ struct NotchRootView: View {
         .onDrop(of: [UTType.fileURL], isTargeted: $model.dropTargeted) { providers in
             guard prefs.isOn(.shelf) else { return false }
             ShelfService.shared.add(providers)
-            model.expand(tab: .shelf)
+            model.expand(tab: Opt.flag("shelf.autoOpen") ? .shelf : nil)
             return true
         }
         .onChange(of: model.dropTargeted) { _, targeted in
-            if targeted, prefs.isOn(.shelf) { model.expand(tab: .shelf) }
+            if targeted, prefs.isOn(.shelf) { model.expand(tab: Opt.flag("shelf.autoOpen") ? .shelf : nil) }
         }
         .overlay {
             if model.expanded, !prefs.reduceMotion, engine.busy || speech.listening {
@@ -114,12 +116,15 @@ struct NotchBackground: View {
                     shape.fill(LinearGradient(colors: [c1.opacity(0.6), c2.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 }
                 // Üst şerit: fiziksel çentikle birleşen siyah
+                // `notchBlend` büyüdükçe tam siyah bölge aşağıya uzar; çentik büyüyormuş gibi görünür.
+                let blend: Double = prefs.notchBlend
+                let solid: Double = min(0.9, Double(blackBand) + 0.34 * blend)
                 shape.fill(LinearGradient(stops: [
                     .init(color: .black, location: 0),
-                    .init(color: .black, location: blackBand),
-                    .init(color: .black.opacity(0.55), location: min(0.9, blackBand + 0.12)),
-                    .init(color: .black.opacity(0.12), location: min(0.95, blackBand + 0.36)),
-                    .init(color: .black.opacity(0.0), location: 1),
+                    .init(color: .black, location: solid),
+                    .init(color: .black.opacity(0.4 + 0.5 * blend), location: min(0.94, solid + 0.14)),
+                    .init(color: .black.opacity(0.1 + 0.6 * blend), location: min(0.97, solid + 0.4)),
+                    .init(color: .black.opacity(0.5 * blend), location: 1),
                 ], startPoint: .top, endPoint: .bottom))
                 border(theme, c1, c2)
             }
@@ -450,7 +455,7 @@ struct HomeView: View {
             if prefs.isOn(.music) {
                 MusicCard().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            if prefs.isOn(.calendar) || prefs.isOn(.reminders) || prefs.isOn(.weather) || prefs.isOn(.ticker) {
+            if prefs.isOn(.calendar) || prefs.isOn(.reminders) || prefs.isOn(.weather) || prefs.isOn(.ticker) || prefs.isOn(.clocks) {
                 AgendaColumn().frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             if !prefs.isOn(.music) && !prefs.isOn(.calendar) && !prefs.isOn(.reminders) && !prefs.isOn(.weather) {

@@ -31,10 +31,10 @@ final class PrivacyService: ObservableObject {
     private func poll() {
         let cam = Self.cameraInUse()
         let mic = Self.micInUse()
-        if cam, !cameraOn {
+        if cam, !cameraOn, Opt.flag("privacy.hud") {
             NotchModel.shared.showHUD(HUDInfo(icon: "video.fill", title: L("Kamera kullanılıyor"), tint: .green), seconds: 2.4)
         }
-        if mic, !micOn, !cam {
+        if mic, !micOn, !cam, Opt.flag("privacy.hud") {
             NotchModel.shared.showHUD(HUDInfo(icon: "mic.fill", title: L("Mikrofon kullanılıyor"), tint: .orange), seconds: 2.4)
         }
         if cam != cameraOn { cameraOn = cam }
@@ -152,7 +152,7 @@ final class DownloadsService: ObservableObject {
         for (path, name) in known where active[path] == nil {
             // Geçici dosya kayboldu: indirme bitti (ya da iptal edildi).
             let finished = (path as NSString).deletingPathExtension
-            if FileManager.default.fileExists(atPath: finished) {
+            if FileManager.default.fileExists(atPath: finished), Opt.flag("downloads.done") {
                 NotchModel.shared.showHUD(HUDInfo(icon: "checkmark.circle.fill", title: Lf("İndirildi: %@", name), tint: .green), seconds: 3)
             }
         }
@@ -199,7 +199,7 @@ final class NetworkService {
             NotchModel.shared.showHUD(HUDInfo(icon: online ? "wifi" : "wifi.slash",
                                               title: online ? L("İnternet bağlantısı geri geldi") : L("İnternet bağlantısı kesildi"),
                                               tint: online ? .green : .red), seconds: 3)
-        } else if online, kind != last.kind {
+        } else if online, kind != last.kind, Opt.flag("network.switch") {
             let name = kind == "wifi" ? "Wi‑Fi" : (kind == "ethernet" ? "Ethernet" : (kind == "cellular" ? L("Kişisel erişim noktası") : L("Ağ")))
             NotchModel.shared.showHUD(HUDInfo(icon: kind == "ethernet" ? "cable.connector" : "wifi", title: Lf("%@ üzerinden bağlı", name), tint: .blue), seconds: 2.6)
         }
@@ -250,7 +250,7 @@ final class TickerService: ObservableObject {
 
     func setEnabled(_ on: Bool) {
         if on, timer == nil {
-            let t = Timer(timeInterval: 30, repeats: true) { [weak self] _ in self?.fetch() }
+            let t = Timer(timeInterval: max(10, Opt.num("ticker.refresh")), repeats: true) { [weak self] _ in self?.fetch() }
             RunLoop.main.add(t, forMode: .common)
             timer = t
             fetch()
@@ -310,7 +310,7 @@ struct TickerRow: View {
             Text(L("Fiyatlar yükleniyor…")).font(.system(size: 10.5)).foregroundStyle(.white.opacity(0.4))
         } else {
             HStack(spacing: 12) {
-                ForEach(ticker.quotes.prefix(3)) { q in
+                ForEach(ticker.quotes.prefix(max(1, Int(Opt.num("ticker.count"))))) { q in
                     HStack(spacing: 4) {
                         Text(TickerService.short(q.symbol)).foregroundStyle(.white.opacity(0.55))
                         Text(TickerService.price(q.price)).fontWeight(.semibold)

@@ -229,10 +229,10 @@ struct LauncherView: View {
                         ForEach(prefs.pinnedApps, id: \.self) { path in
                             Button {
                                 NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: path), configuration: .init())
-                                NotchController.shared.close()
+                                if Opt.flag("launcher.close") { NotchController.shared.close() }
                             } label: {
                                 VStack(spacing: 4) {
-                                    Image(nsImage: NSWorkspace.shared.icon(forFile: URL(fileURLWithPath: path).resolvingSymlinksInPath().path)).resizable().frame(width: 52, height: 52)
+                                    Image(nsImage: NSWorkspace.shared.icon(forFile: URL(fileURLWithPath: path).resolvingSymlinksInPath().path)).resizable().frame(width: Opt.num("launcher.icon"), height: Opt.num("launcher.icon"))
                                     Text(FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""))
                                         .font(.system(size: 10)).lineLimit(1).frame(width: 70)
                                 }

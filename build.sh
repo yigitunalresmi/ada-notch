@@ -28,7 +28,9 @@ BUILD=$(git rev-list --count HEAD 2>/dev/null || echo 1)
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" "$PLIST"
 [ -n "$COMMIT" ] && /usr/libexec/PlistBuddy -c "Add :AdaCommit string $COMMIT" "$PLIST"
 /usr/libexec/PlistBuddy -c "Add :AdaSourcePath string $PWD" "$PLIST"
-IDENTITY=$(security find-identity -v -p codesigning | grep "Apple Development" | head -1 | awk '{print $2}')
+# Sırayla: Developer ID (kurulu sürümle aynı kimlik, izinler ortak kalır), Apple Development, yerel imza.
+IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk '{print $2}')
+[ -z "$IDENTITY" ] && IDENTITY=$(security find-identity -v -p codesigning | grep "Apple Development" | head -1 | awk '{print $2}')
 [ -z "$IDENTITY" ] && IDENTITY="-"
 codesign --force --sign "$IDENTITY" "$APP" 2>&1 | tail -1
 echo "Hazır: $APP"

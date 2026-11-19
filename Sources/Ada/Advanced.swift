@@ -205,9 +205,12 @@ final class NotificationWatcher: ObservableObject {
             image = NSWorkspace.shared.icon(forFile: url.path)
             appName = FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
         }
+        // Yok sayılan uygulamalar
+        let ignored = Opt.list("notifications.ignore").map { $0.lowercased() }
+        if ignored.contains(appName.lowercased()) || ignored.contains(n.bundle.lowercased()) { return }
         let sender = n.title.isEmpty ? appName : n.title
-        NotchModel.shared.showHUD(HUDInfo(icon: "bell.fill", title: n.body.isEmpty ? appName : n.body,
-                                          image: image, leftText: sender, wide: true), seconds: 4.5)
+        NotchModel.shared.showHUD(HUDInfo(icon: "bell.fill", title: (n.body.isEmpty || Opt.flag("notifications.hideBody")) ? appName : n.body,
+                                          image: image, leftText: sender, wide: true), seconds: Opt.num("notifications.duration"))
     }
 }
 
@@ -219,6 +222,8 @@ final class AudioVisualizer: ObservableObject {
 
     @Published var levels: [Float] = [0, 0, 0, 0]
     @Published var active = false
+    /// Ayarlardaki hassasiyet çarpanı (ana iş parçacığından güncellenir).
+    static var gainScale: Float = 1
 
     private var enabled = false
     private var bag = Set<AnyCancellable>()
@@ -260,7 +265,6 @@ final class AudioVisualizer: ObservableObject {
 @available(macOS 14.2, *)
 final class SystemAudioTap {
     var onLevels: (([Float]) -> Void)?
-
     private var tapID = AudioObjectID(kAudioObjectUnknown)
     private var aggregateID = AudioObjectID(kAudioObjectUnknown)
     private var procID: AudioDeviceIOProcID?
@@ -355,7 +359,7 @@ final class SystemAudioTap {
         guard n > 0 else { return }
         let gains: [Float] = [3.2, 4.5, 7.0, 12.0]
         for k in 0..<4 {
-            let level = min(1, (energy[k] / n).squareRoot() * gains[k])
+            let level = min(1, (energy[k] / n).squareRoot() * gains[k] * AudioVisualizer.gainScale)
             smooth[k] = max(level, smooth[k] * 0.82)
         }
         let now = DispatchTime.now()
