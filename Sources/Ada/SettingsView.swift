@@ -360,6 +360,9 @@ struct AssistantSettings: View {
                 Text(L("Asistanın her sohbette uymasını istediğiniz kurallar. Örnek: \"Bana sen diye hitap et, yanıtları tek cümle tut.\""))
             }
 
+            ScheduledTasksSection()
+            CommandsSection()
+
             Section {
                 if prefs.memory.isEmpty {
                     Text(L("Henüz kayıtlı bir şey yok. Asistana \"şunu hatırla…\" diyebilirsiniz."))
@@ -440,6 +443,8 @@ struct GeneralSettings: View {
                 Toggle(L("Son açık sekmeyi hatırla"), isOn: $prefs.rememberTab)
                 Toggle(L("Açılırken dokunsal geri bildirim"), isOn: $prefs.haptics)
                 Toggle(L("Animasyonları azalt (konfeti, yazı efekti, ışıltı)"), isOn: $prefs.reduceMotion)
+                Toggle(L("İki parmakla kaydırma hareketleri"), isOn: $prefs.gestures)
+                ScreenPicker()
             }
             Section(L("Modül ayarları")) {
                 Picker(L("Sıcaklık birimi"), selection: $prefs.fahrenheit) {
@@ -622,6 +627,8 @@ struct AppearanceSettings: View {
             } footer: {
                 Text(L("Ekranın renk tablosunu değiştirir: sıcaklık gece için maviyi azaltır, ek karartma en düşük parlaklığın da altına iner. Ada kapanınca ekran normale döner. Ekran görüntülerine yansımaz."))
             }
+
+            TabOrderSection()
 
             Section(L("Kapalı çentik")) {
                 Toggle(L("Müzik çalarken kapak ve ekolayzır göster"), isOn: $prefs.showMusicWings)

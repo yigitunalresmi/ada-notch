@@ -5,6 +5,8 @@ struct AssistantView: View {
     @ObservedObject var speech = SpeechService.shared
     @ObservedObject var model = NotchModel.shared
     @State private var draft = ""
+    @State private var showHistory = false
+    @ObservedObject var commands = CommandStore.shared
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -20,11 +22,19 @@ struct AssistantView: View {
             .onAppear { engine.refreshKey() }
         } else {
             VStack(spacing: 8) {
-                conversation
+                if showHistory {
+                    ChatHistoryView(visible: $showHistory)
+                } else {
+                    conversation
+                }
                 if let p = engine.pending { confirmCard(p) }
                 SelectionCard()
+                AttachmentChips()
+                commandChips
                 inputBar
             }
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: engine.attachments)
+            .animation(.easeInOut(duration: 0.2), value: showHistory)
             .onAppear {
                 focusSoon()
                 speech.autoSend = { text in
@@ -133,8 +143,45 @@ struct AssistantView: View {
         .glassCard(RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 
+    /// "/" ile başlayan girişte eşleşen komutlar.
+    @ViewBuilder private var commandChips: some View {
+        let list = commands.matches(draft)
+        if !list.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(list) { cmd in
+                        Button("/" + cmd.name) { draft = "/" + cmd.name + " " }
+                            .buttonStyle(PillButtonStyle(tint: Prefs.shared.accentColor.opacity(0.55)))
+                            .fixedSize()
+                            .help(cmd.prompt)
+                    }
+                }
+            }
+        }
+    }
+
+    private func pickFiles() {
+        NotchController.shared.close()
+        NSApp.activate(ignoringOtherApps: true)
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.prompt = L("Ekle")
+        if panel.runModal() == .OK {
+            engine.attach(panel.urls)
+            NotchController.shared.toggleAssistant()
+        }
+    }
+
     private var inputBar: some View {
         HStack(spacing: 8) {
+            Button { pickFiles() } label: {
+                Image(systemName: "paperclip").font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7)).frame(width: 22, height: 26).contentShape(Rectangle())
+            }
+            .buttonStyle(HoverIconStyle())
+            .help(L("Dosya ya da görsel ekle (çentiğe sürükleyip bırakabilirsiniz)"))
+
             Button {
                 speech.toggle { text in
                     draft = ""
@@ -174,15 +221,19 @@ struct AssistantView: View {
                 }
                 .buttonStyle(.plain).help(L("Durdur"))
             } else {
+                Button { showHistory.toggle() } label: {
+                    Image(systemName: "clock.arrow.circlepath").font(.system(size: 12)).foregroundStyle(.white.opacity(showHistory ? 0.95 : 0.45))
+                }
+                .buttonStyle(HoverIconStyle()).help(L("Sohbet geçmişi"))
                 if !engine.items.isEmpty {
                     Button { engine.reset(); SpeechService.shared.stopSpeaking() } label: {
                         Image(systemName: "trash").font(.system(size: 12)).foregroundStyle(.white.opacity(0.45))
                     }
-                    .buttonStyle(.plain).help(L("Sohbeti temizle"))
+                    .buttonStyle(.plain).help(L("Yeni sohbet"))
                 }
                 Button(action: submit) {
                     Image(systemName: "arrow.up.circle.fill").font(.system(size: 19))
-                        .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty ? .white.opacity(0.25) : .white)
+                        .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty && engine.attachments.isEmpty ? .white.opacity(0.25) : .white)
                 }
                 .buttonStyle(.plain)
             }
@@ -193,8 +244,11 @@ struct AssistantView: View {
 
     private func submit() {
         if speech.listening { speech.stop() }
-        let text = draft
+        let typed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         draft = ""
-        engine.send(text)
+        showHistory = false
+        // "/komut" ise talimata çevir; sohbette yazdığınız hali görünür.
+        let expanded = commands.expand(typed)
+        engine.send(expanded, display: expanded == typed ? nil : typed)
     }
 }

@@ -158,8 +158,54 @@ final class AssistantEngine: ObservableObject {
     var revealed = Set<UUID>()
     @Published var hasKey = (Keychain.get() ?? "").isEmpty == false
 
+    /// Bir sonraki mesaja eklenecek dosyalar.
+    @Published var attachments: [URL] = []
     private var history: [[String: Any]] = []
     private var task: Task<Void, Never>?
+    private var chatID = UUID()
+    /// Zamanlanmış bir görev bittiğinde sonucu bildirmek için.
+    private var scheduledTitle: String?
+
+    func attach(_ urls: [URL]) {
+        for url in urls where url.isFileURL && !attachments.contains(url) && attachments.count < Attachment.maxCount {
+            attachments.append(url)
+        }
+    }
+
+    func attach(_ providers: [NSItemProvider]) {
+        for p in providers {
+            _ = p.loadObject(ofClass: URL.self) { url, _ in
+                guard let url else { return }
+                DispatchQueue.main.async { self.attach([url]) }
+            }
+        }
+    }
+
+    /// Kayıtlı bir sohbeti geri yükler. Bağlam yalnızca görünen metinlerden yeniden kurulur.
+    @MainActor
+    func load(_ chat: SavedChat) {
+        stop()
+        chatID = chat.id
+        items = chat.items.map { ChatItem(role: $0.role == "user" ? .user : .assistant, text: $0.text) }
+        revealed = Set(items.map(\.id))
+        history = []
+        for item in chat.items {
+            if let last = history.last, last["role"] as? String == item.role, let text = last["content"] as? String {
+                history[history.count - 1]["content"] = text + "\n\n" + item.text
+            } else if !(history.isEmpty && item.role != "user") {
+                history.append(["role": item.role, "content": item.text])
+            }
+        }
+        attachments = []
+    }
+
+    /// Zamanlanmış görev: talimatı çalıştırır, bitince sonucu çentikte gösterir.
+    @MainActor
+    func runScheduled(title: String, prompt: String) {
+        guard !busy, !prompt.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        scheduledTitle = title
+        send(prompt, display: "⏰ " + title)
+    }
 
     static let systemPrompt = """
     You are Ada, an assistant that lives in the notch of the user's MacBook. The user talks to you from a small panel at the top of the screen, sometimes by voice.
@@ -185,21 +231,47 @@ final class AssistantEngine: ObservableObject {
     func refreshKey() { hasKey = (Keychain.get() ?? "").isEmpty == false }
 
     @MainActor
-    func send(_ raw: String) {
-        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !busy else { return }
-        items.append(ChatItem(role: .user, text: text))
+    func send(_ raw: String, display: String? = nil) {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !busy, !text.isEmpty || !attachments.isEmpty else { return }
+        if text.isEmpty { text = L("Bunu incele ve kısaca anlat.") }
+        // Ekleri içerik bloklarına çevir.
+        var blocks: [[String: Any]] = []
+        var names: [String] = []
+        var skipped: [String] = []
+        for url in attachments {
+            if let block = Attachment.block(for: url) { blocks.append(block); names.append(url.lastPathComponent) } else { skipped.append(url.lastPathComponent) }
+        }
+        attachments = []
+        let shown = (display ?? text) + (names.isEmpty ? "" : "\n📎 " + names.joined(separator: ", "))
+        items.append(ChatItem(role: .user, text: shown))
+        if !skipped.isEmpty {
+            items.append(ChatItem(role: .error, text: Lf("Eklenemedi (desteklenmeyen tür ya da çok büyük): %@", skipped.joined(separator: ", "))))
+        }
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd HH:mm EEEE"
         let ctx = "\n\n<context>now: \(f.string(from: Date())), timezone: \(TimeZone.current.identifier)</context>"
-        history.append(["role": "user", "content": text + ctx])
+        if blocks.isEmpty {
+            history.append(["role": "user", "content": text + ctx])
+        } else {
+            blocks.append(["type": "text", "text": text + ctx])
+            history.append(["role": "user", "content": blocks])
+        }
         busy = true
         status = L("Düşünüyor…")
         task = Task { @MainActor in
             await self.run()
             self.busy = false
             self.status = ""
+            ChatStore.shared.save(id: self.chatID, items: self.items)
+            if let title = self.scheduledTitle {
+                self.scheduledTitle = nil
+                let answer = self.items.last(where: { $0.role == .assistant })?.text ?? ""
+                let line = answer.components(separatedBy: "\n").first(where: { !$0.isEmpty }) ?? L("Tamamlandı")
+                NotchModel.shared.showHUD(HUDInfo(icon: "sparkles", title: String(line.prefix(90)), leftText: title, wide: true,
+                                                  tint: Prefs.shared.accentColor), seconds: 7)
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { SpeechService.shared.resumeIfIdle() }
         }
     }
@@ -215,6 +287,8 @@ final class AssistantEngine: ObservableObject {
         stop()
         items = []
         history = []
+        attachments = []
+        chatID = UUID()
     }
 
     @MainActor
@@ -288,7 +362,9 @@ final class AssistantEngine: ObservableObject {
     private func repairHistory() {
         while let last = history.last, last["role"] as? String == "user" {
             history.removeLast()
-            if last["content"] is String { break }
+            // Yalnızca araç sonucu taşıyan mesajların önündeki asistan mesajı da çıkarılır.
+            let isToolResult = ((last["content"] as? [[String: Any]])?.first?["type"] as? String) == "tool_result"
+            if !isToolResult { break }
             // tool_result'tan önceki tool_use içeren asistan mesajını da çıkar
             if let prev = history.last, prev["role"] as? String == "assistant" { history.removeLast() }
         }

@@ -88,7 +88,16 @@ enum Opt {
         .xdr: [
             s("xdr.step", L("Her basışta artış"), 0.05...0.2, 0.05, "%.2f×", 0.1),
         ],
-        .privacy: [t("privacy.hud", L("Kullanım başlayınca bildirim göster"), true)],
+        .privacy: [
+            t("privacy.hud", L("Kullanım başlayınca bildirim göster"), true),
+            t("privacy.micHotkey", L("⌥M ile mikrofonu kapat/aç"), true),
+        ],
+        .clipboard: [
+            t("clipboard.images", L("Görselleri de sakla"), true),
+            t("clipboard.clickPastes", L("Tıklayınca doğrudan yapıştır"), false),
+            t("clipboard.hotkey", L("⌥⇧V ile panoyu aç"), true),
+            t("clipboard.persist", L("Metinleri yeniden başlatınca da sakla"), false),
+        ],
         .network: [t("network.switch", L("Ağ değişince de bildir"), true)],
         .downloads: [t("downloads.done", L("İndirme bitince bildir"), true)],
         .timer: [

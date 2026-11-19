@@ -156,6 +156,7 @@ struct QuickActionsRow: View {
     @ObservedObject var awake = KeepAwakeService.shared
     @State private var muted = Audio.muted()
     @State private var wifi = true
+    @ObservedObject var mic = MicState.shared
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -173,6 +174,7 @@ struct QuickActionsRow: View {
                 muted = Audio.muted()
             }
             action("eyedropper", L("Renk")) { QuickAction.pickColor() }
+            action(mic.muted ? "mic.slash.fill" : "mic.fill", L("Mikrofon"), on: mic.muted) { Microphone.toggle() }
             action("display", L("Uyut")) { QuickAction.sleepDisplay() }
             Menu {
                 let current = Audio.defaultDevice()

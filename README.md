@@ -31,7 +31,10 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 
 **Araçlar**
 - Zamanlayıcı (hazır süreler ayarlanabilir) ve Pomodoro, mola hatırlatıcı, pano geçmişi, hızlı not, işlemci/bellek/ağ
-- Hızlı işlemler: görünüm, uyanık tut, ekran alıntısı, sessiz, renk seçici, ekranı uyut, ses çıkışı seçimi
+- Pano geçmişi: metin ve görseller, sabitleme, arama, `⌥⇧V` ile açıp tıklayarak yapıştırma
+- Mikrofon kontrolü: `⌥M` ile sistem düzeyinde sessize alma (her toplantı uygulamasında çalışır)
+- Odak istatistikleri: Pomodoro ile bugün ve son yedi günde ne kadar odaklandığınız
+- Hızlı işlemler: Wi‑Fi, mikrofon, görünüm, uyanık tut, ekran alıntısı, sessiz, renk seçici, ekranı uyut, ses çıkışı seçimi
 - Dosya rafı (sürükle-bırak, AirDrop; isteğe bağlı olarak yeni ekran görüntüleri kendiliğinden eklenir), uygulama başlatıcı, ayna
 
 **Asistan (Claude)**
@@ -40,6 +43,10 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
   uygulama açma/kapama, pencere yerleştirme, seçili metni okuma, dosya arama, zamanlayıcı ve Pomodoro,
   pano, not, Kestirmeler, web araması, Ada'nın kendi ayarları
 - Kalıcı hafıza ve özel talimatlar
+- Dosya ve görsel ekleme: çentiğe PDF, görsel ya da metin dosyası sürükleyip hakkında soru sorabilirsiniz
+- Zamanlanmış görevler: sabah özeti, kargo/uçuş takibi ya da kendi yazdığınız talimat belirlediğiniz saatte çalışır
+- Sohbet geçmişi (aranabilir) ve kendi `/komut`larınız
+- Apple Mail: seçili iletiyi okur, yanıt ya da yeni ileti taslağı hazırlar (asla göndermez)
 - `⌥⇧ Boşluk`: herhangi bir uygulamada seçili metni asistana gönderir (özetle, çevir, yazımı düzelt, açıkla, yanıt yaz)
 - İsteğe bağlı: ekrana bakma ve AppleScript çalıştırma (her betik için onay ister)
 
@@ -49,6 +56,10 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 - Beş tema: Aurora (hareketli renk bulutları), Neon (dönen ışıklı kenar), Gradyan, Cam, Siyah
 - Tema renkleri, hazır renk paletleri, cam saydamlığı, boyut, köşe yuvarlaklığı, vurgu rengi
 - Ekran iyileştirme: renk sıcaklığı, kontrast ve en düşük parlaklığın altına inen ek karartma
+
+**Kullanım**
+- Sekme sırasını değiştirme, Ada'nın duracağı ekranı seçme (harici ekran dahil)
+- İki parmakla kaydırma: üst çubukta sekme değiştirir; kapalı çentikte parça atlar, aşağı kaydırınca açar
 
 **Ayarlar**
 - Her modül tek tek açılıp kapatılabilir; modül kartındaki ince ayar düğmesiyle o modüle özel ayarlar açılır
@@ -120,7 +131,7 @@ Ada yalnızca açtığınız modüllerin ihtiyaç duyduğu izinleri ister:
 | İzin | Ne için |
 |---|---|
 | Erişilebilirlik | Ses/parlaklık tuşlarını yakalama, pencere yerleştirme, seçili metni okuma |
-| Otomasyon (Spotify, Music, System Events) | Müzik kontrolü, karanlık mod |
+| Otomasyon (Spotify, Music, System Events, Mail) | Müzik kontrolü, karanlık mod, e-posta taslağı |
 | Takvim, Anımsatıcılar | Ana sekme ve asistan |
 | Konum | Hava durumu |
 | Bluetooth | Bağlanma bildirimleri |

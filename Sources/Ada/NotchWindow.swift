@@ -74,6 +74,10 @@ final class NotchController: NSObject, NSWindowDelegate {
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
 
         if let holdTab { model.expand(tab: holdTab) }
+        NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] e in
+            self?.handleScroll(e)
+            return e
+        }
         let t = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
@@ -81,13 +85,51 @@ final class NotchController: NSObject, NSWindowDelegate {
 
     @objc private func screensChanged() { reposition() }
 
+    func screenPrefChanged() {
+        guard panel != nil else { return }
+        reposition()
+    }
+
+    // MARK: Kaydırma hareketleri
+
+    private var swipeX: CGFloat = 0
+    private var swipeY: CGFloat = 0
+    private var swipeFired = false
+
+    /// İki parmakla kaydırma: üst çubukta sekme değiştirir; kapalı çentikte parça atlar ya da aşağı kaydırınca açar.
+    private func handleScroll(_ e: NSEvent) {
+        guard Prefs.shared.gestures, e.window === panel, e.hasPreciseScrollingDeltas else { return }
+        if e.phase == .began { swipeX = 0; swipeY = 0; swipeFired = false }
+        guard e.phase == .changed, !swipeFired else { return }
+        swipeX += e.scrollingDeltaX
+        swipeY += e.scrollingDeltaY
+        let horizontal = abs(swipeX) > 45 && abs(swipeX) > abs(swipeY) * 2
+        if model.expanded {
+            // Yalnızca üst çubuğun üzerindeyken: içerikteki yatay kaydırmalarla karışmasın.
+            let topBar = e.locationInWindow.y > panel.frame.height - max(model.notchSize.height, 30)
+            guard horizontal, topBar else { return }
+            let tabs = model.availableTabs
+            guard let index = tabs.firstIndex(of: model.tab) else { return }
+            let next = index + (swipeX < 0 ? 1 : -1)
+            if tabs.indices.contains(next) { model.tab = tabs[next] }
+            swipeFired = true
+        } else if horizontal, model.compactMusic {
+            if swipeX < 0 { MusicService.shared.next() } else { MusicService.shared.previous() }
+            swipeFired = true
+        } else if swipeY > 40, abs(swipeY) > abs(swipeX) * 2 {
+            model.expand()
+            swipeFired = true
+        }
+    }
+
     func attachToLockScreen() {
         guard panel != nil else { return }
         LockScreen.attach(panel)
     }
 
     private func reposition() {
-        let target = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main ?? NSScreen.screens.first
+        let chosen = Prefs.shared.screenName.isEmpty ? nil : NSScreen.screens.first { $0.localizedName == Prefs.shared.screenName }
+        let target = chosen ?? NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main ?? NSScreen.screens.first
         guard let s = target else { return }
         screen = s
         if s.safeAreaInsets.top > 0 {
@@ -186,6 +228,15 @@ final class NotchController: NSObject, NSWindowDelegate {
         model.focusInput += 1
     }
 
+    /// ⌥⇧V: panoyu aç.
+    func openClipboard() {
+        guard Prefs.shared.isOn(.clipboard) else { return }
+        if model.expanded, model.tab == .tools { close(); return }
+        previewUntil = Date().addingTimeInterval(8)
+        model.expand(tab: .tools)
+        lastInside = Date()
+    }
+
     func makeKey() {
         panel.makeKey()
     }
@@ -203,9 +254,16 @@ final class NotchController: NSObject, NSWindowDelegate {
 
 final class HotKey {
     static let shared = HotKey()
-    private var ref: EventHotKeyRef?
-    private var selectionRef: EventHotKeyRef?
+    private var refs: [UInt32: EventHotKeyRef] = [:]
     private var installed = false
+
+    /// Kimlik → (tuş, niteleyiciler). 1: asistan, 2: seçili metin, 3: pano, 4: mikrofon.
+    private let keys: [UInt32: (key: Int, mods: Int)] = [
+        1: (kVK_Space, optionKey),
+        2: (kVK_Space, optionKey | shiftKey),
+        3: (kVK_ANSI_V, optionKey | shiftKey),
+        4: (kVK_ANSI_M, optionKey),
+    ]
 
     private func install() {
         guard !installed else { return }
@@ -217,33 +275,32 @@ final class HotKey {
                               MemoryLayout<EventHotKeyID>.size, nil, &hk)
             let id = hk.id
             DispatchQueue.main.async {
-                if id == 2 { NotchController.shared.askAboutSelection() } else { NotchController.shared.toggleAssistant() }
+                switch id {
+                case 2: NotchController.shared.askAboutSelection()
+                case 3: NotchController.shared.openClipboard()
+                case 4: Microphone.toggle()
+                default: NotchController.shared.toggleAssistant()
+                }
             }
             return noErr
         }, 1, &spec, nil, nil)
     }
 
-    /// ⌥ Boşluk: asistanı aç.
-    func setEnabled(_ on: Bool) {
-        if on, ref == nil {
+    func set(_ id: UInt32, enabled: Bool) {
+        if enabled, refs[id] == nil, let k = keys[id] {
             install()
-            let id = EventHotKeyID(signature: OSType(0x4144_4131), id: 1)
-            RegisterEventHotKey(UInt32(kVK_Space), UInt32(optionKey), id, GetApplicationEventTarget(), 0, &ref)
-        } else if !on, let r = ref {
-            UnregisterEventHotKey(r)
-            ref = nil
+            var ref: EventHotKeyRef?
+            RegisterEventHotKey(UInt32(k.key), UInt32(k.mods), EventHotKeyID(signature: OSType(0x4144_4131), id: id), GetApplicationEventTarget(), 0, &ref)
+            if let ref { refs[id] = ref }
+        } else if !enabled, let ref = refs[id] {
+            UnregisterEventHotKey(ref)
+            refs[id] = nil
         }
     }
 
+    /// ⌥ Boşluk: asistanı aç.
+    func setEnabled(_ on: Bool) { set(1, enabled: on) }
+
     /// ⌥⇧ Boşluk: seçili metinle asistanı aç.
-    func setSelectionEnabled(_ on: Bool) {
-        if on, selectionRef == nil {
-            install()
-            let id = EventHotKeyID(signature: OSType(0x4144_4131), id: 2)
-            RegisterEventHotKey(UInt32(kVK_Space), UInt32(optionKey | shiftKey), id, GetApplicationEventTarget(), 0, &selectionRef)
-        } else if !on, let r = selectionRef {
-            UnregisterEventHotKey(r)
-            selectionRef = nil
-        }
-    }
+    func setSelectionEnabled(_ on: Bool) { set(2, enabled: on) }
 }

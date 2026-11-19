@@ -213,6 +213,10 @@ final class Prefs: ObservableObject {
     @Published var notchBlend: Double { didSet { d.set(notchBlend, forKey: "notchBlend") } }
     /// Kapalı çentiğin kanatlarında yumuşak siyah kenar.
     @Published var wingFeather: Bool { didSet { d.set(wingFeather, forKey: "wingFeather") } }
+    @Published var tabOrder: [String] { didSet { d.set(tabOrder, forKey: "tabOrder") } }
+    /// Ada'nın duracağı ekranın adı; boşsa çentikli ekran.
+    @Published var screenName: String { didSet { d.set(screenName, forKey: "screenName"); DispatchQueue.main.async { NotchController.shared.screenPrefChanged() } } }
+    @Published var gestures: Bool { didSet { d.set(gestures, forKey: "gestures") } }
     @Published var memory: [String] { didSet { d.set(memory, forKey: "memory") } }
 
     private init() {
@@ -245,6 +249,9 @@ final class Prefs: ObservableObject {
         effort = d.object(forKey: "effort") as? String ?? "low"
         customInstructions = d.object(forKey: "customInstructions") as? String ?? ""
         memory = d.stringArray(forKey: "memory") ?? []
+        tabOrder = d.stringArray(forKey: "tabOrder") ?? []
+        screenName = d.string(forKey: "screenName") ?? ""
+        gestures = d.object(forKey: "gestures") as? Bool ?? true
         options = d.dictionary(forKey: "options") ?? [:]
         notchBlend = d.object(forKey: "notchBlend") as? Double ?? 0.6
         wingFeather = d.object(forKey: "wingFeather") as? Bool ?? true
@@ -279,6 +286,12 @@ final class Prefs: ObservableObject {
 
     private func tuningChanged() {
         DispatchQueue.main.async { BoostService.shared.refresh() }
+    }
+
+    /// Tüm sekmeler, kullanıcının sırasıyla (bilinmeyenler sonda).
+    var orderedTabs: [NotchTab] {
+        let saved = tabOrder.compactMap(NotchTab.init(rawValue:))
+        return saved + NotchTab.allCases.filter { !saved.contains($0) }
     }
 
     var accentColor: Color { Self.accents.first { $0.id == accent }?.color ?? .blue }
@@ -357,7 +370,8 @@ final class NotchModel: ObservableObject {
         if p.isOn(.shelf) { t.append(.shelf) }
         if p.isOn(.launcher) { t.append(.apps) }
         if p.isOn(.mirror) { t.append(.mirror) }
-        return t
+        let order = p.orderedTabs
+        return t.sorted { (order.firstIndex(of: $0) ?? 99) < (order.firstIndex(of: $1) ?? 99) }
     }
 
     var compactMeeting: Bool {
@@ -548,6 +562,8 @@ final class ModuleManager {
         TickerService.shared.setEnabled(p.isOn(.ticker))
         CapsLockMonitor.shared.setEnabled(p.isOn(.hud) && Opt.flag("hud.caps"))
         BreakReminder.shared.setEnabled(p.isOn(.breaks))
+        HotKey.shared.set(3, enabled: p.isOn(.clipboard) && Opt.flag("clipboard.hotkey"))
+        HotKey.shared.set(4, enabled: p.isOn(.privacy) && Opt.flag("privacy.micHotkey"))
         AudioVisualizer.gainScale = Float(Opt.num("visualizer.gain"))
         FocusService.shared.setEnabled(p.isOn(.focus))
         NotificationWatcher.shared.setEnabled(p.isOn(.notifications))

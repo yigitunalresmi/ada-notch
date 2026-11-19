@@ -83,15 +83,25 @@ struct ShelfView: View {
 
 // MARK: - Pano geçmişi
 
+struct ClipItem: Identifiable, Equatable {
+    let id = UUID()
+    var text: String?
+    var image: NSImage?
+    var pinned = false
+
+    static func == (a: ClipItem, b: ClipItem) -> Bool { a.id == b.id && a.pinned == b.pinned }
+}
+
 final class ClipboardService: ObservableObject {
     static let shared = ClipboardService()
-    @Published var items: [String] = []
+    @Published var items: [ClipItem] = []
     private var timer: Timer?
     private var lastCount = NSPasteboard.general.changeCount
 
     func setEnabled(_ on: Bool) {
         if on, timer == nil {
             lastCount = NSPasteboard.general.changeCount
+            restore()
             let t = Timer(timeInterval: 0.8, repeats: true) { [weak self] _ in self?.poll() }
             RunLoop.main.add(t, forMode: .common)
             timer = t
@@ -108,17 +118,82 @@ final class ClipboardService: ObservableObject {
         // Parola yöneticilerinin "gizli" olarak işaretlediği içerikleri kaydetme.
         let types = pb.types?.map(\.rawValue) ?? []
         if types.contains("org.nspasteboard.ConcealedType") || types.contains("org.nspasteboard.TransientType") { return }
-        guard let s = pb.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return }
-        items.removeAll { $0 == s }
-        items.insert(s, at: 0)
+        if let s = pb.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty {
+            let wasPinned = items.first { $0.text == s }?.pinned ?? false
+            items.removeAll { $0.text == s }
+            insert(ClipItem(text: s, pinned: wasPinned))
+        } else if Opt.flag("clipboard.images"), let data = pb.data(forType: .png) ?? pb.data(forType: .tiff), let image = NSImage(data: data) {
+            insert(ClipItem(image: image))
+        }
+    }
+
+    private func insert(_ item: ClipItem) {
+        items.insert(item, at: 0)
         let limit = max(5, Int(Prefs.shared.clipboardLimit))
-        if items.count > limit { items.removeLast(items.count - limit) }
+        // Sınır aşılınca en eski sabitlenmemiş öğeler atılır.
+        while items.count > limit, let index = items.lastIndex(where: { !$0.pinned }) { items.remove(at: index) }
+        persist()
+    }
+
+    func togglePin(_ id: UUID) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].pinned.toggle()
+        persist()
+    }
+
+    func remove(_ id: UUID) {
+        items.removeAll { $0.id == id }
+        persist()
+    }
+
+    /// Yalnızca metinler ve yalnızca kullanıcı isterse diske yazılır.
+    private func persist() {
+        guard Opt.flag("clipboard.persist") else {
+            UserDefaults.standard.removeObject(forKey: "clipboardItems")
+            return
+        }
+        let list = items.compactMap { item -> [String: Any]? in
+            guard let t = item.text else { return nil }
+            return ["text": t, "pinned": item.pinned]
+        }
+        UserDefaults.standard.set(list, forKey: "clipboardItems")
+    }
+
+    private func restore() {
+        guard Opt.flag("clipboard.persist"), items.isEmpty,
+              let list = UserDefaults.standard.array(forKey: "clipboardItems") as? [[String: Any]] else { return }
+        items = list.compactMap { d in
+            guard let t = d["text"] as? String else { return nil }
+            return ClipItem(text: t, pinned: d["pinned"] as? Bool ?? false)
+        }
     }
 
     func copy(_ s: String) {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(s, forType: .string)
+    }
+
+    func copy(_ item: ClipItem) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        if let t = item.text { pb.setString(t, forType: .string) } else if let image = item.image { pb.writeObjects([image]) }
+        lastCount = pb.changeCount
+    }
+
+    /// Öğeyi panoya alır ve öndeki uygulamaya yapıştırır (Erişilebilirlik izni gerekir).
+    func paste(_ item: ClipItem) {
+        copy(item)
+        NotchController.shared.close()
+        guard AX.trusted else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            let source = CGEventSource(stateID: .combinedSessionState)
+            for down in [true, false] {
+                let e = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: down) // V
+                e?.flags = .maskCommand
+                e?.post(tap: .cghidEventTap)
+            }
+        }
     }
 }
 
@@ -166,6 +241,8 @@ final class CountdownService: ObservableObject {
     }
 
     func stop() {
+        // Yarıda bırakılan odak süresi de istatistiğe yazılır.
+        if running, pomodoro, working { FocusStats.shared.add(minutes: (total - max(0, remaining)) / 60) }
         timer?.invalidate(); timer = nil
         running = false
         remaining = 0
@@ -177,6 +254,7 @@ final class CountdownService: ObservableObject {
         if remaining <= 0 {
             if Prefs.shared.timerSound { NSSound(named: "Glass")?.play() }
             if pomodoro {
+                if working { FocusStats.shared.add(minutes: total / 60) }
                 working.toggle()
                 if !working { if Opt.flag("timer.confetti") { NotchModel.shared.celebration += 1 } }
                 NotchModel.shared.showHUD(HUDInfo(icon: working ? "brain.head.profile" : "cup.and.saucer.fill",
@@ -208,6 +286,7 @@ struct ToolsView: View {
     @ObservedObject var clipboard = ClipboardService.shared
     @ObservedObject var notes = NotesService.shared
     @ObservedObject var stats = StatsService.shared
+    @State private var clipQuery = ""
 
     var body: some View {
         VStack(spacing: 8) {
@@ -245,31 +324,64 @@ struct ToolsView: View {
                 }
                 Button { countdown.startPomodoro() } label: { Label("Pomodoro", systemImage: "brain.head.profile") }
                     .buttonStyle(PillButtonStyle(tint: .orange.opacity(0.55)))
+                FocusStatsView()
             }
             Spacer(minLength: 0)
         }
     }
 
     private var clipboardColumn: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            SectionTitle(text: L("Pano"))
+        let list = clipboard.items.filter { item in
+            clipQuery.isEmpty || (item.text?.localizedCaseInsensitiveContains(clipQuery) ?? false)
+        }.sorted { $0.pinned && !$1.pinned }
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                SectionTitle(text: L("Pano"))
+                if clipboard.items.count > 3 {
+                    TextField(L("Ara"), text: $clipQuery)
+                        .textFieldStyle(.plain).font(.system(size: 10.5))
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .glassCard(Capsule())
+                        .onTapGesture { NotchController.shared.makeKey() }
+                }
+            }
             if clipboard.items.isEmpty {
                 Text(L("Kopyaladıklarınız burada görünür.")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
                 Spacer(minLength: 0)
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 4) {
-                        ForEach(clipboard.items, id: \.self) { item in
-                            Button { clipboard.copy(item) } label: {
-                                Text(item)
-                                    .font(.system(size: 11)).lineLimit(2)
+                        ForEach(list) { item in
+                            HStack(spacing: 4) {
+                                Button {
+                                    if Opt.flag("clipboard.clickPastes") { clipboard.paste(item) } else { clipboard.copy(item) }
+                                } label: {
+                                    Group {
+                                        if let image = item.image {
+                                            Image(nsImage: image).resizable().aspectRatio(contentMode: .fit).frame(height: 30)
+                                                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                                        } else {
+                                            Text(item.text ?? "").font(.system(size: 11)).lineLimit(2)
+                                        }
+                                    }
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 8).padding(.vertical, 5)
-                                    .glassCard(RoundedRectangle(cornerRadius: 7, style: .continuous))
                                     .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .help(Opt.flag("clipboard.clickPastes") ? L("Yapıştır") : L("Yeniden kopyala"))
+                                Button { clipboard.togglePin(item.id) } label: {
+                                    Image(systemName: item.pinned ? "pin.fill" : "pin").font(.system(size: 9))
+                                        .foregroundStyle(item.pinned ? Color.yellow : .white.opacity(0.35))
+                                }
+                                .buttonStyle(HoverIconStyle()).help(L("Sabitle"))
                             }
-                            .buttonStyle(.plain)
-                            .help(L("Yeniden kopyala"))
+                            .padding(.horizontal, 8).padding(.vertical, 5)
+                            .glassCard(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                            .contextMenu {
+                                Button(L("Yapıştır")) { clipboard.paste(item) }
+                                Button(L("Kopyala")) { clipboard.copy(item) }
+                                Button(L("Sil")) { clipboard.remove(item.id) }
+                            }
                         }
                     }
                 }

@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         installMainMenu()
         Updater.shared.start()
+        Scheduler.shared.start()
         // Geliştirme testi: açılışta güncellemeyi denetleyip kurar.
         if ProcessInfo.processInfo.environment["ADA_TEST_UPDATE"] != nil {
             Prefs.shared.autoInstallUpdates = true

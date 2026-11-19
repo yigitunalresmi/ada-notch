@@ -67,13 +67,17 @@ struct NotchRootView: View {
         .frame(width: size.width, height: size.height)
         .contentShape(Rectangle())
         .onDrop(of: [UTType.fileURL], isTargeted: $model.dropTargeted) { providers in
+            if model.expanded, model.tab == .assistant, prefs.isOn(.assistant) {
+                AssistantEngine.shared.attach(providers)
+                return true
+            }
             guard prefs.isOn(.shelf) else { return false }
             ShelfService.shared.add(providers)
             model.expand(tab: Opt.flag("shelf.autoOpen") ? .shelf : nil)
             return true
         }
         .onChange(of: model.dropTargeted) { _, targeted in
-            if targeted, prefs.isOn(.shelf) { model.expand(tab: Opt.flag("shelf.autoOpen") ? .shelf : nil) }
+            if targeted, prefs.isOn(.shelf), !(model.expanded && model.tab == .assistant) { model.expand(tab: Opt.flag("shelf.autoOpen") ? .shelf : nil) }
         }
         .overlay {
             if model.expanded, !prefs.reduceMotion, engine.busy || speech.listening {
@@ -380,6 +384,8 @@ struct TopBar: View {
     @ObservedObject var prefs = Prefs.shared
     @ObservedObject var battery = BatteryService.shared
     @ObservedObject var weather = WeatherService.shared
+    @ObservedObject var privacy = PrivacyService.shared
+    @ObservedObject var mic = MicState.shared
     @Namespace private var tabSpace
 
     var body: some View {
@@ -410,6 +416,13 @@ struct TopBar: View {
             Color.clear.frame(width: model.notchSize.width - 10)
 
             HStack(spacing: 10) {
+                if prefs.isOn(.privacy), privacy.micOn || mic.muted {
+                    Button { Microphone.toggle() } label: {
+                        Image(systemName: mic.muted ? "mic.slash.fill" : "mic.fill").foregroundStyle(mic.muted ? .red : .orange)
+                    }
+                    .buttonStyle(HoverIconStyle())
+                    .help(mic.muted ? L("Mikrofonu aç") : L("Mikrofonu kapat"))
+                }
                 if prefs.isOn(.focus), let mode = FocusService.shared.current {
                     Image(systemName: mode.symbol).foregroundStyle(.indigo).help(mode.name)
                 }

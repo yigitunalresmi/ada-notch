@@ -96,6 +96,11 @@ enum ToolBox {
                  ["theme": choice("Theme", ["aurora", "neon", "gradient", "glass", "black"])], required: ["theme"]),
             tool("market_prices", "Current price and 24h change for crypto pairs from Binance's public data.",
                  ["symbols": str("Comma-separated Binance symbols such as BTCUSDT, ETHUSDT. Defaults to the user's watchlist.")]),
+            tool("get_selected_mail", "Read the message currently selected in Apple Mail (subject, sender, body), e.g. to summarise it or draft a reply."),
+            tool("create_mail_draft", "Open a draft in Apple Mail for the user to review. This never sends anything. Use reply_to_selected to reply to the message selected in Mail.",
+                 ["body": str("Body text of the draft"), "subject": str("Subject, for a new message"), "to": str("Recipient address, for a new message"),
+                  "reply_to_selected": bool("true to create a reply to the selected message")],
+                 required: ["body"]),
             tool("audio_output", "List the Mac's audio output devices or switch the output to one of them (speakers, AirPods, a display…).",
                  ["action": choice("What to do", ["list", "set"]), "name": str("Device name, or part of it, when setting")],
                  required: ["action"]),
@@ -154,6 +159,8 @@ enum ToolBox {
         case "add_to_shelf": return L("Rafa ekleniyor")
         case "keep_awake": return L("Uyku ayarı")
         case "audio_output": return L("Ses çıkışı")
+        case "get_selected_mail": return L("E-posta okunuyor")
+        case "create_mail_draft": return L("E-posta taslağı hazırlanıyor")
         case "market_prices": return L("Fiyatlara bakılıyor")
         case "display_tuning": return L("Ekran ayarlanıyor")
         case "set_theme": return L("Tema değiştiriliyor")
@@ -487,6 +494,14 @@ enum ToolBox {
             }
             return .ok(arr.map { "\($0["symbol"] ?? "?"): \($0["lastPrice"] ?? "?") (24h \($0["priceChangePercent"] ?? "?")%)" }.joined(separator: "\n"))
 
+        case "get_selected_mail":
+            return await MailBridge.selectedMessage()
+
+        case "create_mail_draft":
+            guard let body = input["body"] as? String else { return .fail("Missing body.") }
+            return await MailBridge.draft(to: input["to"] as? String, subject: input["subject"] as? String, body: body,
+                                          replyToSelected: input["reply_to_selected"] as? Bool ?? false)
+
         case "audio_output":
             let devices = Audio.outputDevices()
             let current = Audio.defaultDevice()
@@ -558,7 +573,7 @@ enum ToolBox {
         }
     }
 
-    private static func jpegBase64(_ image: NSImage, maxWidth: CGFloat) -> String? {
+    static func jpegBase64(_ image: NSImage, maxWidth: CGFloat) -> String? {
         guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
         let scale = min(1, maxWidth / CGFloat(cg.width))
         let w = Int(CGFloat(cg.width) * scale), h = Int(CGFloat(cg.height) * scale)
