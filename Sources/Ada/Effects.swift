@@ -156,43 +156,6 @@ struct HourForecast: Identifiable, Equatable {
     var rain: Int
 }
 
-struct ForecastStrip: View {
-    @ObservedObject var weather = WeatherService.shared
-    @ObservedObject var prefs = Prefs.shared
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            SectionTitle(text: L("Saatlik tahmin"))
-            if weather.hourly.isEmpty {
-                Text(L("Tahmin yükleniyor…")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
-            } else {
-                HStack(spacing: 0) {
-                    ForEach(Array(weather.hourly.prefix(max(4, Int(Opt.num("weather.hours")))).enumerated()), id: \.element.id) { index, h in
-                        VStack(spacing: 3) {
-                            Text(hour(h.time)).font(.system(size: 9.5)).foregroundStyle(.white.opacity(0.5))
-                            Image(systemName: WeatherNow(temperature: 0, code: h.code, isDay: h.isDay, place: "").symbol)
-                                .symbolRenderingMode(.multicolor)
-                                .font(.system(size: 15))
-                                .frame(height: 18)
-                            Text("\(prefs.temp(h.temperature))°").font(.system(size: 11.5, weight: .semibold))
-                            Text(h.rain > 0 && Opt.flag("weather.rain") ? "%\(h.rain)" : " ").font(.system(size: 9)).foregroundStyle(.cyan)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                        .animation(.spring(response: 0.35, dampingFraction: 0.8).delay(Double(index) * 0.03), value: weather.hourly)
-                    }
-                }
-            }
-        }
-    }
-
-    private func hour(_ d: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f.string(from: d)
-    }
-}
-
 // MARK: - Ekran görüntülerini rafa ekleme
 
 /// Yeni alınan ekran görüntülerini Spotlight üzerinden yakalar ve dosya rafına ekler.

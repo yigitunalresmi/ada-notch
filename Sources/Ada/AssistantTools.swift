@@ -55,9 +55,10 @@ enum ToolBox {
             tool("open_url", "Open a URL in the default browser or the app that handles its scheme (https, mailto, spotify, …).",
                  ["url": str("The URL to open")], required: ["url"]),
             tool("get_weather", "Get the current weather at the user's location."),
-            tool("timer", "Start, stop or check Ada's countdown timer.",
-                 ["action": choice("What to do", ["start", "stop", "status"]),
+            tool("timer", "Start, stop or check Ada's countdown timer, set an alarm for a clock time, or start a stopwatch.",
+                 ["action": choice("What to do", ["start", "stop", "status", "stopwatch"]),
                   "minutes": num("Duration in minutes when starting"),
+                  "at": str("Instead of minutes: a local clock time HH:mm to ring at (today, or tomorrow if already past)"),
                   "label": str("Optional short label shown when the timer ends")],
                  required: ["action"]),
             tool("clipboard", "Read the clipboard or put text on it.",
@@ -101,6 +102,10 @@ enum ToolBox {
                  ["body": str("Body text of the draft"), "subject": str("Subject, for a new message"), "to": str("Recipient address, for a new message"),
                   "reply_to_selected": bool("true to create a reply to the selected message")],
                  required: ["body"]),
+            tool("todo", "Read or change the user's to-do list in Ada.",
+                 ["action": choice("What to do", ["list", "add", "complete", "remove"]), "text": str("Item text to add, or part of the text of the item to complete/remove")],
+                 required: ["action"]),
+            tool("app_usage", "How long each app has been in front today on this Mac (tracked locally by Ada)."),
             tool("audio_output", "List the Mac's audio output devices or switch the output to one of them (speakers, AirPods, a display…).",
                  ["action": choice("What to do", ["list", "set"]), "name": str("Device name, or part of it, when setting")],
                  required: ["action"]),
@@ -159,6 +164,8 @@ enum ToolBox {
         case "add_to_shelf": return L("Rafa ekleniyor")
         case "keep_awake": return L("Uyku ayarı")
         case "audio_output": return L("Ses çıkışı")
+        case "todo": return L("Yapılacaklar")
+        case "app_usage": return L("Kullanıma bakılıyor")
         case "get_selected_mail": return L("E-posta okunuyor")
         case "create_mail_draft": return L("E-posta taslağı hazırlanıyor")
         case "market_prices": return L("Fiyatlara bakılıyor")
@@ -344,9 +351,21 @@ enum ToolBox {
             let c = CountdownService.shared
             switch input["action"] as? String ?? "" {
             case "start":
-                guard let m = number(input["minutes"]), m > 0 else { return .fail("Missing minutes.") }
+                var minutes = number(input["minutes"])
+                if let at = input["at"] as? String {
+                    let parts = at.split(separator: ":").compactMap { Int($0) }
+                    guard parts.count == 2, var target = Calendar.current.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: Date()) else {
+                        return .fail("at must be HH:mm.")
+                    }
+                    if target <= Date() { target = target.addingTimeInterval(86400) }
+                    minutes = target.timeIntervalSinceNow / 60
+                }
+                guard let m = minutes, m > 0 else { return .fail("Missing minutes or at.") }
                 c.start(minutes: m, label: input["label"] as? String ?? "")
                 return .ok("Timer started for \(m) minute(s).")
+            case "stopwatch":
+                c.startStopwatch()
+                return .ok("Stopwatch started.")
             case "stop":
                 c.stop()
                 return .ok("Timer stopped.")
@@ -395,6 +414,10 @@ enum ToolBox {
             let apps = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }.compactMap(\.localizedName)
             lines.append("Running apps: \(apps.joined(separator: ", "))")
             let on = ModuleID.allCases.filter { Prefs.shared.isOn($0) }.map(\.rawValue)
+            let sys = await Task.detached { SystemInfo.collect() }.value
+            if let h = sys.health { lines.append("Battery health: \(h)%\(sys.cycles.map { ", \($0) cycles" } ?? "")") }
+            if sys.diskTotal > 0 { lines.append(String(format: "Disk: %.0f GB free of %.0f GB", sys.diskFree / 1e9, sys.diskTotal / 1e9)) }
+            if !sys.top.isEmpty { lines.append("Top CPU: " + sys.top.map { "\($0.name) \(Int($0.cpu))%" }.joined(separator: ", ")) }
             lines.append("Ada modules on: \(on.joined(separator: ", "))")
             return .ok(lines.joined(separator: "\n"))
 
@@ -501,6 +524,33 @@ enum ToolBox {
             guard let body = input["body"] as? String else { return .fail("Missing body.") }
             return await MailBridge.draft(to: input["to"] as? String, subject: input["subject"] as? String, body: body,
                                           replyToSelected: input["reply_to_selected"] as? Bool ?? false)
+
+        case "todo":
+            let store = TodoStore.shared
+            let text = (input["text"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            switch input["action"] as? String ?? "list" {
+            case "add":
+                guard !text.isEmpty else { return .fail("Missing text.") }
+                store.add(text)
+                return .ok("Added: \(text)")
+            case "complete":
+                guard let i = store.index(matching: text) else { return .fail("No to-do item matches \"\(text)\".") }
+                store.items[i].done = true
+                return .ok("Completed: \(store.items[i].text)")
+            case "remove":
+                guard let i = store.index(matching: text) else { return .fail("No to-do item matches \"\(text)\".") }
+                let removed = store.items.remove(at: i)
+                return .ok("Removed: \(removed.text)")
+            default:
+                if store.items.isEmpty { return .ok("The to-do list is empty.") }
+                return .ok(store.items.map { ($0.done ? "[x] " : "[ ] ") + $0.text }.joined(separator: "\n"))
+            }
+
+        case "app_usage":
+            guard Prefs.shared.isOn(.today), Opt.flag("today.usage") else { return .fail("App usage tracking is off in Ada's settings.") }
+            let list = AppUsage.shared.today
+            if list.isEmpty { return .ok("No usage recorded yet today.") }
+            return .ok(list.prefix(12).map { "\($0.name): \(Int($0.seconds / 60)) min" }.joined(separator: "\n"))
 
         case "audio_output":
             let devices = Audio.outputDevices()

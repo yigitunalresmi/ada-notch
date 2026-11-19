@@ -10,7 +10,7 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 **Ana sekme**
 - Spotify ve Apple Music: kapak, ilerleme çubuğu, oynatma kontrolleri, karışık çalma, zamanlı şarkı sözleri
 - Takvim ve anımsatıcılar; görüntülü toplantılar için "Katıl" düğmesi
-- Konuma göre hava durumu; tıklayınca saatlik tahmin
+- Konuma göre hava durumu; tıklayınca saatlik ve günlük tahmin; yağmur uyarısı
 - Piyasa takibi: seçtiğiniz kripto fiyatları (isteğe bağlı)
 - Dünya saatleri: seçtiğiniz şehirlerin saati
 
@@ -29,13 +29,19 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 - Gerçek ses görselleştirici — sistem sesini dinleme izni ister; ses kaydedilmez
 - Kilit ekranında görünme — deneysel
 
+**Bugün sekmesi**
+- Uygulama kullanımı (hangi uygulama ne kadar önde kaldı), pil sağlığı ve döngü sayısı, boş disk,
+  en çok işlemci kullanan uygulamalar ve çentikte gösterilen son bildirimler
+
 **Araçlar**
-- Zamanlayıcı (hazır süreler ayarlanabilir) ve Pomodoro, mola hatırlatıcı, pano geçmişi, hızlı not, işlemci/bellek/ağ
+- Zamanlayıcı (hazır süreler ayarlanabilir), kronometre, saatli alarm ve Pomodoro; yapılacaklar listesi, mola hatırlatıcı, pano geçmişi, hızlı not, işlemci/bellek/ağ
 - Pano geçmişi: metin ve görseller, sabitleme, arama, `⌥⇧V` ile açıp tıklayarak yapıştırma
 - Mikrofon kontrolü: `⌥M` ile sistem düzeyinde sessize alma (her toplantı uygulamasında çalışır)
 - Odak istatistikleri: Pomodoro ile bugün ve son yedi günde ne kadar odaklandığınız
 - Hızlı işlemler: Wi‑Fi, mikrofon, görünüm, uyanık tut, ekran alıntısı, sessiz, renk seçici, ekranı uyut, ses çıkışı seçimi
-- Dosya rafı (sürükle-bırak, AirDrop; isteğe bağlı olarak yeni ekran görüntüleri kendiliğinden eklenir), uygulama başlatıcı, ayna
+- Dosya rafı (sürükle-bırak, AirDrop; isteğe bağlı olarak yeni ekran görüntüleri kendiliğinden eklenir), ayna
+- Başlatıcı: uygulamalar, dosya ve klasörler, web bağlantıları ve Kestirmeler (tek tıkla çalıştırma)
+- Sessiz mod: bir saat boyunca önemli olmayan bildirimleri göstermez
 
 **Asistan (Claude)**
 - Yazılı sohbet, bas-konuş dikte ve eller serbest sesli sohbet modu; `⌥ Boşluk` kısayolu
@@ -58,6 +64,7 @@ Fareyle çentiğin üstüne gelince açılır; müzik, takvim, hava durumu, ara�
 - Ekran iyileştirme: renk sıcaklığı, kontrast ve en düşük parlaklığın altına inen ek karartma
 
 **Kullanım**
+- Tam ekran uygulamalarda (film, sunum, oyun) kendiliğinden gizlenme (isteğe bağlı)
 - Sekme sırasını değiştirme, Ada'nın duracağı ekranı seçme (harici ekran dahil)
 - İki parmakla kaydırma: üst çubukta sekme değiştirir; kapalı çentikte parça atlar, aşağı kaydırınca açar
 

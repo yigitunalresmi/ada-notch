@@ -157,6 +157,7 @@ struct QuickActionsRow: View {
     @State private var muted = Audio.muted()
     @State private var wifi = true
     @ObservedObject var mic = MicState.shared
+    @ObservedObject var model = NotchModel.shared
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -172,6 +173,14 @@ struct QuickActionsRow: View {
             action(muted ? "speaker.slash.fill" : "speaker.wave.2.fill", L("Sessiz"), on: muted) {
                 QuickAction.toggleMute()
                 muted = Audio.muted()
+            }
+            action(model.quiet ? "bell.slash.fill" : "bell.fill", L("Sessiz mod"), on: model.quiet) {
+                if model.quiet {
+                    model.quietUntil = .distantPast
+                } else {
+                    model.showHUD(HUDInfo(icon: "bell.slash.fill", title: L("Sessiz mod 1 saat açık"), tint: .indigo), seconds: 2.2, important: true)
+                    model.quietUntil = Date().addingTimeInterval(3600)
+                }
             }
             action("eyedropper", L("Renk")) { QuickAction.pickColor() }
             action(mic.muted ? "mic.slash.fill" : "mic.fill", L("Mikrofon"), on: mic.muted) { Microphone.toggle() }
@@ -211,58 +220,3 @@ struct QuickActionsRow: View {
     }
 }
 
-// MARK: - Uygulama başlatıcı
-
-struct LauncherView: View {
-    @ObservedObject var prefs = Prefs.shared
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                SectionTitle(text: L("Uygulamalar"))
-                Spacer()
-                Button { addApp() } label: { Label(L("Ekle"), systemImage: "plus") }.buttonStyle(PillButtonStyle())
-            }
-            if prefs.pinnedApps.isEmpty {
-                EmptyHint(icon: "square.grid.3x3", text: L("Sık kullandığınız uygulamaları \"Ekle\" ile sabitleyin."))
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(prefs.pinnedApps, id: \.self) { path in
-                            Button {
-                                NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: path), configuration: .init())
-                                if Opt.flag("launcher.close") { NotchController.shared.close() }
-                            } label: {
-                                VStack(spacing: 4) {
-                                    Image(nsImage: NSWorkspace.shared.icon(forFile: URL(fileURLWithPath: path).resolvingSymlinksInPath().path)).resizable().frame(width: Opt.num("launcher.icon"), height: Opt.num("launcher.icon"))
-                                    Text(FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""))
-                                        .font(.system(size: 10)).lineLimit(1).frame(width: 70)
-                                }
-                                .padding(.vertical, 6).padding(.horizontal, 2)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button(L("Başlatıcıdan Kaldır")) { prefs.pinnedApps.removeAll { $0 == path } }
-                            }
-                        }
-                    }
-                }
-                .frame(maxHeight: .infinity)
-            }
-        }
-    }
-
-    private func addApp() {
-        NotchController.shared.close()
-        NSApp.activate(ignoringOtherApps: true)
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.application]
-        panel.allowsMultipleSelection = true
-        panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.prompt = L("Sabitle")
-        if panel.runModal() == .OK {
-            for url in panel.urls where !prefs.pinnedApps.contains(url.path) { prefs.pinnedApps.append(url.path) }
-        }
-    }
-}

@@ -207,6 +207,9 @@ final class CountdownService: ObservableObject {
     @Published var label = ""
     @Published var pomodoro = false
     @Published var working = true
+    /// Kronometre: geri saymak yerine geçen süreyi gösterir.
+    @Published var stopwatch = false
+    private var startedAt = Date()
     private var end = Date()
     private var timer: Timer?
 
@@ -228,7 +231,22 @@ final class CountdownService: ObservableObject {
         begin(minutes: minutes, label: label)
     }
 
+    func startStopwatch() {
+        pomodoro = false
+        stopwatch = true
+        startedAt = Date()
+        total = 0
+        remaining = 0
+        label = L("Kronometre")
+        running = true
+        timer?.invalidate()
+        let t = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in self?.tick() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
     private func begin(minutes: Double, label: String) {
+        stopwatch = false
         total = minutes * 60
         remaining = total
         end = Date().addingTimeInterval(total)
@@ -247,9 +265,14 @@ final class CountdownService: ObservableObject {
         running = false
         remaining = 0
         pomodoro = false
+        stopwatch = false
     }
 
     private func tick() {
+        if stopwatch {
+            remaining = Date().timeIntervalSince(startedAt)
+            return
+        }
         remaining = end.timeIntervalSinceNow
         if remaining <= 0 {
             if Prefs.shared.timerSound { NSSound(named: "Glass")?.play() }
@@ -258,14 +281,14 @@ final class CountdownService: ObservableObject {
                 working.toggle()
                 if !working { if Opt.flag("timer.confetti") { NotchModel.shared.celebration += 1 } }
                 NotchModel.shared.showHUD(HUDInfo(icon: working ? "brain.head.profile" : "cup.and.saucer.fill",
-                                                  title: working ? L("Odak zamanı") : L("Mola zamanı"), tint: .orange), seconds: 5)
+                                                  title: working ? L("Odak zamanı") : L("Mola zamanı"), tint: .orange), seconds: 5, important: true)
                 begin(minutes: working ? Prefs.shared.pomodoroWork : Prefs.shared.pomodoroBreak, label: working ? L("Odak") : L("Mola"))
                 return
             }
             let name = label.isEmpty ? L("Süre doldu") : Lf("%@ · süre doldu", "\(label)")
             stop()
             if Opt.flag("timer.confetti") { NotchModel.shared.celebration += 1 }
-            NotchModel.shared.showHUD(HUDInfo(icon: "bell.fill", title: name, tint: .orange), seconds: 5)
+            NotchModel.shared.showHUD(HUDInfo(icon: "bell.fill", title: name, tint: .orange), seconds: 5, important: true)
         }
     }
 }
@@ -287,6 +310,7 @@ struct ToolsView: View {
     @ObservedObject var notes = NotesService.shared
     @ObservedObject var stats = StatsService.shared
     @State private var clipQuery = ""
+    @AppStorage("notesMode") private var notesMode = "note"
 
     var body: some View {
         VStack(spacing: 8) {
@@ -322,9 +346,14 @@ struct ToolsView: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                Button { countdown.startPomodoro() } label: { Label("Pomodoro", systemImage: "brain.head.profile") }
-                    .buttonStyle(PillButtonStyle(tint: .orange.opacity(0.55)))
-                FocusStatsView()
+                HStack(spacing: 6) {
+                    Button { countdown.startPomodoro() } label: { Label("Pomodoro", systemImage: "brain.head.profile") }
+                        .buttonStyle(PillButtonStyle(tint: .orange.opacity(0.55)))
+                        .fixedSize()
+                    Button { countdown.startStopwatch() } label: { Image(systemName: "stopwatch") }
+                        .buttonStyle(PillButtonStyle())
+                        .help(L("Kronometre"))
+                }
             }
             Spacer(minLength: 0)
         }
@@ -391,12 +420,25 @@ struct ToolsView: View {
 
     private var notesColumn: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionTitle(text: L("Not"))
-            TextEditor(text: $notes.text)
-                .font(.system(size: Opt.num("notes.font")))
-                .scrollContentBackground(.hidden)
-                .padding(6)
-                .glassCard(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            HStack(spacing: 6) {
+                SectionTitle(text: notesMode == "todo" ? L("Yapılacaklar") : L("Not"))
+                Spacer()
+                Button { withAnimation(.easeInOut(duration: 0.2)) { notesMode = notesMode == "todo" ? "note" : "todo" } } label: {
+                    Image(systemName: notesMode == "todo" ? "note.text" : "checklist")
+                        .font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.6))
+                }
+                .buttonStyle(HoverIconStyle())
+                .help(notesMode == "todo" ? L("Nota geç") : L("Yapılacaklar listesine geç"))
+            }
+            if notesMode == "todo" {
+                TodoListView()
+            } else {
+                TextEditor(text: $notes.text)
+                    .font(.system(size: Opt.num("notes.font")))
+                    .scrollContentBackground(.hidden)
+                    .padding(6)
+                    .glassCard(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            }
         }
     }
 

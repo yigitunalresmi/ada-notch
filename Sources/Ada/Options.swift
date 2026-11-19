@@ -62,7 +62,9 @@ enum Opt {
             s("weather.refresh", L("Yenileme aralığı"), 10...120, 10, L("%.0f dk"), 20),
             s("weather.hours", L("Tahminde saat sayısı"), 4...8, 1, "%.0f", 6),
             t("weather.rain", L("Yağış olasılığını göster"), true),
+            s("weather.rainAlert", L("Yağmur uyarısı eşiği (0 = kapalı)"), 0...100, 10, "%%%.0f", 60),
         ],
+        .today: [t("today.usage", L("Uygulama kullanımını kaydet"), true)],
         .ticker: [
             s("ticker.refresh", L("Yenileme aralığı"), 10...300, 10, L("%.0f sn"), 30),
             s("ticker.count", L("Gösterilecek sembol sayısı"), 1...4, 1, "%.0f", 3),
@@ -126,6 +128,7 @@ enum Opt {
         .notifications: [
             s("notifications.duration", L("Gösterim süresi"), 2...8, 0.5, L("%.1f sn"), 4.5),
             t("notifications.hideBody", L("İçeriği gizle, yalnızca göndereni göster"), false),
+            t("notifications.quietInFocus", L("Odak modu açıkken gösterme"), true),
             x("notifications.ignore", L("Yok sayılacak uygulamalar (virgülle)"), "Mail, Slack", ""),
         ],
         .visualizer: [s("visualizer.gain", L("Hassasiyet"), 0.5...2.5, 0.1, "%.1f×", 1.0)],

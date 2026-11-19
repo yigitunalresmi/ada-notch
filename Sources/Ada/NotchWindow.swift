@@ -162,8 +162,30 @@ final class NotchController: NSObject, NSWindowDelegate {
         return panel.isKeyWindow && model.tab == .assistant
     }
 
+    private var fullscreenChecked = Date.distantPast
+    private var hiddenForFullscreen = false
+
     private func tick() {
         guard let s = screen else { return }
+        // Tam ekran bir uygulama öndeyken (film, sunum, oyun) Ada görünmez olur.
+        if Prefs.shared.hideInFullscreen {
+            if Date().timeIntervalSince(fullscreenChecked) > 1 {
+                fullscreenChecked = Date()
+                hiddenForFullscreen = Fullscreen.active(on: s)
+            }
+        } else {
+            hiddenForFullscreen = false
+        }
+        if hiddenForFullscreen {
+            if panel.alphaValue != 0 {
+                panel.alphaValue = 0
+                panel.ignoresMouseEvents = true
+                model.collapse()
+            }
+            return
+        } else if panel.alphaValue == 0 {
+            panel.alphaValue = 1
+        }
         let size = model.currentSize()
         let pad: CGFloat = model.expanded ? 14 : 2
         let rect = NSRect(

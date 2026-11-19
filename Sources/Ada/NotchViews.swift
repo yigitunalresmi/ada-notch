@@ -365,6 +365,7 @@ struct ExpandedView: View {
                 case .tools: ToolsView()
                 case .shelf: ShelfView()
                 case .apps: LauncherView()
+                case .today: TodayView()
                 case .mirror: MirrorView()
                 }
             }

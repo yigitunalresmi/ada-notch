@@ -53,7 +53,7 @@ enum ModuleID: String, CaseIterable, Identifiable {
     case shelf, clipboard, timer, notes, mirror, launcher, assistant
     case privacy, downloads, network, ticker
     case focus, notifications, visualizer, lockscreen, screenshots
-    case clocks, breaks
+    case clocks, breaks, today
 
     /// İzin penceresi açtığı ya da dışarıya istek gönderdiği için kapalı gelen modüller.
     static let defaultOff: Set<ModuleID> = [.downloads, .ticker, .focus, .notifications, .visualizer, .lockscreen, .screenshots, .breaks]
@@ -89,6 +89,7 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .screenshots: return L("Ekran görüntülerini rafa ekle")
         case .clocks: return L("Dünya saatleri")
         case .breaks: return L("Mola hatırlatıcı")
+        case .today: return L("Bugün sekmesi")
         case .assistant: return L("Asistan")
         }
     }
@@ -122,6 +123,7 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .screenshots: return "camera.viewfinder"
         case .clocks: return "globe"
         case .breaks: return "figure.walk"
+        case .today: return "chart.bar.fill"
         case .assistant: return "sparkles"
         }
     }
@@ -155,6 +157,7 @@ enum ModuleID: String, CaseIterable, Identifiable {
         case .screenshots: return L("Yeni aldığınız ekran görüntüleri kendiliğinden dosya rafına eklenir.")
         case .clocks: return L("Seçtiğiniz şehirlerin saatini Ana sekmede gösterir.")
         case .breaks: return L("Belirlediğiniz süre kesintisiz çalıştığınızda mola vermenizi hatırlatır.")
+        case .today: return L("Uygulama kullanımı, pil sağlığı, disk, en çok işlemci kullananlar ve son bildirimler.")
         case .assistant: return L("Claude ile sohbet; takvim, müzik ve Mac ayarlarını sizin için yönetir.")
         }
     }
@@ -217,6 +220,7 @@ final class Prefs: ObservableObject {
     /// Ada'nın duracağı ekranın adı; boşsa çentikli ekran.
     @Published var screenName: String { didSet { d.set(screenName, forKey: "screenName"); DispatchQueue.main.async { NotchController.shared.screenPrefChanged() } } }
     @Published var gestures: Bool { didSet { d.set(gestures, forKey: "gestures") } }
+    @Published var hideInFullscreen: Bool { didSet { d.set(hideInFullscreen, forKey: "hideInFullscreen") } }
     @Published var memory: [String] { didSet { d.set(memory, forKey: "memory") } }
 
     private init() {
@@ -252,6 +256,7 @@ final class Prefs: ObservableObject {
         tabOrder = d.stringArray(forKey: "tabOrder") ?? []
         screenName = d.string(forKey: "screenName") ?? ""
         gestures = d.object(forKey: "gestures") as? Bool ?? true
+        hideInFullscreen = d.object(forKey: "hideInFullscreen") as? Bool ?? false
         options = d.dictionary(forKey: "options") ?? [:]
         notchBlend = d.object(forKey: "notchBlend") as? Double ?? 0.6
         wingFeather = d.object(forKey: "wingFeather") as? Bool ?? true
@@ -309,7 +314,7 @@ final class Prefs: ObservableObject {
 // MARK: - Çentik durumu
 
 enum NotchTab: String, CaseIterable, Identifiable {
-    case home, assistant, tools, shelf, apps, mirror
+    case home, assistant, tools, shelf, apps, mirror, today
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -318,6 +323,7 @@ enum NotchTab: String, CaseIterable, Identifiable {
         case .tools: return "square.grid.2x2.fill"
         case .shelf: return "tray.full.fill"
         case .apps: return "square.grid.3x3.fill"
+        case .today: return "chart.bar.fill"
         case .mirror: return "person.crop.square.fill"
         }
     }
@@ -328,6 +334,7 @@ enum NotchTab: String, CaseIterable, Identifiable {
         case .tools: return L("Araçlar")
         case .shelf: return L("Raf")
         case .apps: return L("Uygulamalar")
+        case .today: return L("Bugün")
         case .mirror: return L("Ayna")
         }
     }
@@ -369,6 +376,7 @@ final class NotchModel: ObservableObject {
         if p.isOn(.timer) || p.isOn(.clipboard) || p.isOn(.notes) || p.isOn(.stats) { t.append(.tools) }
         if p.isOn(.shelf) { t.append(.shelf) }
         if p.isOn(.launcher) { t.append(.apps) }
+        if p.isOn(.today) { t.append(.today) }
         if p.isOn(.mirror) { t.append(.mirror) }
         let order = p.orderedTabs
         return t.sorted { (order.firstIndex(of: $0) ?? 99) < (order.firstIndex(of: $1) ?? 99) }
@@ -396,7 +404,20 @@ final class NotchModel: ObservableObject {
         return CGSize(width: notchSize.width + 2 * wing, height: notchSize.height)
     }
 
-    func showHUD(_ info: HUDInfo, seconds: Double = 2.0) {
+    /// Çentikte gösterilen son bildirimler ("Bugün" sekmesinde listelenir).
+    @Published var hudLog: [HUDLogItem] = []
+    /// Sessiz mod: bu ana kadar önemli olmayan bildirimler gösterilmez.
+    @Published var quietUntil = Date.distantPast
+    var quiet: Bool { Date() < quietUntil }
+
+    /// `important`: sessiz modda da gösterilir (ör. zamanlayıcının bitmesi).
+    func showHUD(_ info: HUDInfo, seconds: Double = 2.0, important: Bool = false) {
+        if info.value == nil {
+            let text = [info.leftText, info.title].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " — ")
+            hudLog.append(HUDLogItem(icon: info.icon, text: text, date: Date()))
+            if hudLog.count > 30 { hudLog.removeFirst(hudLog.count - 30) }
+            if quiet, !important { return }
+        }
         hudToken += 1
         let token = hudToken
         hud = info
@@ -562,6 +583,7 @@ final class ModuleManager {
         TickerService.shared.setEnabled(p.isOn(.ticker))
         CapsLockMonitor.shared.setEnabled(p.isOn(.hud) && Opt.flag("hud.caps"))
         BreakReminder.shared.setEnabled(p.isOn(.breaks))
+        AppUsage.shared.setEnabled(p.isOn(.today) && Opt.flag("today.usage"))
         HotKey.shared.set(3, enabled: p.isOn(.clipboard) && Opt.flag("clipboard.hotkey"))
         HotKey.shared.set(4, enabled: p.isOn(.privacy) && Opt.flag("privacy.micHotkey"))
         AudioVisualizer.gainScale = Float(Opt.num("visualizer.gain"))

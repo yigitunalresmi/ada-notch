@@ -199,6 +199,8 @@ final class NotificationWatcher: ObservableObject {
 
     private func show(_ n: (bundle: String, title: String, body: String)) {
         guard n.bundle != Bundle.main.bundleIdentifier else { return }
+        // Odak modu açıkken gelen bildirimleri gösterme (isteğe bağlı).
+        if Opt.flag("notifications.quietInFocus"), Prefs.shared.isOn(.focus), FocusService.shared.current != nil { return }
         var image: NSImage?
         var appName = ""
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: n.bundle) {

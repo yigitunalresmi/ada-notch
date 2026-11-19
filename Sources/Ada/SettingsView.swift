@@ -133,7 +133,7 @@ struct ModulesSettings: View {
     private let groups: [(String, Color, [ModuleID])] = [
         (L("Ana sekme"), .pink, [.music, .lyrics, .calendar, .reminders, .weather, .ticker, .clocks]),
         (L("Canlı bildirimler ve ekran"), .orange, [.battery, .bluetooth, .hud, .xdr, .privacy, .network, .downloads]),
-        (L("Araçlar"), .blue, [.timer, .breaks, .clipboard, .notes, .stats, .shelf, .screenshots, .launcher, .mirror]),
+        (L("Araçlar"), .blue, [.timer, .breaks, .clipboard, .notes, .stats, .today, .shelf, .screenshots, .launcher, .mirror]),
         (L("Asistan"), .purple, [.assistant]),
         (L("Gelişmiş (ek izin gerektirir)"), .gray, [.focus, .notifications, .visualizer, .lockscreen]),
     ]
@@ -444,6 +444,7 @@ struct GeneralSettings: View {
                 Toggle(L("Açılırken dokunsal geri bildirim"), isOn: $prefs.haptics)
                 Toggle(L("Animasyonları azalt (konfeti, yazı efekti, ışıltı)"), isOn: $prefs.reduceMotion)
                 Toggle(L("İki parmakla kaydırma hareketleri"), isOn: $prefs.gestures)
+                Toggle(L("Tam ekran uygulamalarda gizlen"), isOn: $prefs.hideInFullscreen)
                 ScreenPicker()
             }
             Section(L("Modül ayarları")) {

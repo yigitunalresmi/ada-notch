@@ -221,6 +221,8 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
 
     @Published var current: WeatherNow?
     @Published var hourly: [HourForecast] = []
+    @Published var daily: [DayForecast] = []
+    private var lastRainAlert = Date.distantPast
     @Published var denied = false
 
     private let manager = CLLocationManager()
@@ -265,10 +267,19 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
         fetch(lat: loc.coordinate.latitude, lon: loc.coordinate.longitude)
     }
 
+    /// Hava şu an yağışlı değilse ve bir saat içinde yağış olasılığı eşiği aşıyorsa haber verir.
+    private func checkRain(_ hours: [HourForecast], currentCode: Int) {
+        let threshold = Opt.num("weather.rainAlert")
+        guard threshold > 0, let next = hours.first, Double(next.rain) >= threshold, currentCode < 51,
+              Date().timeIntervalSince(lastRainAlert) > 3 * 3600 else { return }
+        lastRainAlert = Date()
+        NotchModel.shared.showHUD(HUDInfo(icon: "cloud.rain.fill", title: Lf("Bir saat içinde yağış olasılığı %%%@", "\(next.rain)"), wide: true, tint: .cyan), seconds: 5)
+    }
+
     private func fetch(lat: Double, lon: Double) {
         // Konum yaklaşık 1 km hassasiyete yuvarlanarak gönderilir.
         let la = String(format: "%.2f", lat), lo = String(format: "%.2f", lon)
-        let s = "https://api.open-meteo.com/v1/forecast?latitude=\(la)&longitude=\(lo)&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&hourly=temperature_2m,weather_code,precipitation_probability,is_day&timezone=auto&forecast_days=2"
+        let s = "https://api.open-meteo.com/v1/forecast?latitude=\(la)&longitude=\(lo)&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&hourly=temperature_2m,weather_code,precipitation_probability,is_day&timezone=auto&forecast_days=6"
         guard let url = URL(string: s) else { return }
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data,
@@ -278,6 +289,19 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
             let daily = json["daily"] as? [String: Any]
             let hi = (daily?["temperature_2m_max"] as? [Double])?.first
             let lo = (daily?["temperature_2m_min"] as? [Double])?.first
+            var days: [DayForecast] = []
+            if let dates = daily?["time"] as? [String], let highs = daily?["temperature_2m_max"] as? [Double],
+               let lows = daily?["temperature_2m_min"] as? [Double] {
+                let codes = daily?["weather_code"] as? [Int] ?? []
+                let rains = daily?["precipitation_probability_max"] as? [Int] ?? []
+                let df = DateFormatter()
+                df.locale = Locale(identifier: "en_US_POSIX")
+                df.dateFormat = "yyyy-MM-dd"
+                for i in 0..<min(dates.count, highs.count, lows.count) {
+                    guard let d = df.date(from: dates[i]) else { continue }
+                    days.append(DayForecast(date: d, high: highs[i], low: lows[i], code: i < codes.count ? codes[i] : 3, rain: i < rains.count ? rains[i] : 0))
+                }
+            }
             let now = WeatherNow(temperature: temp, code: cur["weather_code"] as? Int ?? 3,
                                  isDay: (cur["is_day"] as? Int ?? 1) == 1, high: hi, low: lo, place: "")
             // Saatlik tahmin: şu andan sonraki saatler
@@ -302,6 +326,8 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
                 n.place = self.place
                 self.current = n
                 self.hourly = hours
+                self.daily = days
+                self.checkRain(hours, currentCode: now.code)
             }
         }.resume()
     }
