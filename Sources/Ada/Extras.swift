@@ -97,11 +97,30 @@ enum QuickAction {
         Script.fire("tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode")
     }
 
+    /// Sistem Ayarları › Klavye'de "seçilen alanı panoya kopyala" kısayolu kapatılmamışsa true.
+    private static var systemSelectionShortcutEnabled: Bool {
+        guard let keys = UserDefaults(suiteName: "com.apple.symbolichotkeys")?.dictionary(forKey: "AppleSymbolicHotKeys"),
+              let entry = keys["31"] as? [String: Any], let enabled = entry["enabled"] as? Bool else { return true }
+        return enabled
+    }
+
     static func screenshotSelection() {
         NotchController.shared.close()
-        // Ada'nın Ekran Kaydı izni yoksa macOS'in kendi Ekran Görüntüsü aracı açılır; onun için izin gerekmez.
+        // Ada'nın Ekran Kaydı izni yoksa macOS'in kendi alan seçme kısayolu (⌃⇧⌘4: seçilen alanı panoya kopyalar)
+        // tetiklenir; ekran görüntüsünü sistem aldığı için Ada'ya izin gerekmez. O da olmazsa Ekran Görüntüsü aracı açılır.
         guard CGPreflightScreenCaptureAccess() else {
-            NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: "/System/Applications/Utilities/Screenshot.app"), configuration: .init())
+            if AX.trusted, systemSelectionShortcutEnabled {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    let source = CGEventSource(stateID: .combinedSessionState)
+                    for down in [true, false] {
+                        let e = CGEvent(keyboardEventSource: source, virtualKey: 21, keyDown: down) // 4
+                        e?.flags = [.maskCommand, .maskShift, .maskControl]
+                        e?.post(tap: .cghidEventTap)
+                    }
+                }
+            } else {
+                NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: "/System/Applications/Utilities/Screenshot.app"), configuration: .init())
+            }
             return
         }
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.4) {
