@@ -37,6 +37,11 @@ enum AppLanguage {
             UserDefaults.standard.set([code], forKey: "AppleLanguages")
         }
         UserDefaults.standard.synchronize()
+        relaunch()
+    }
+
+    /// Ada'yı kapatıp yeniden açar.
+    static func relaunch() {
         let path = Bundle.main.bundlePath
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/sh")

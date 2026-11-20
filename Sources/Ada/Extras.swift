@@ -99,6 +99,11 @@ enum QuickAction {
 
     static func screenshotSelection() {
         NotchController.shared.close()
+        // Ada'nın Ekran Kaydı izni yoksa macOS'in kendi Ekran Görüntüsü aracı açılır; onun için izin gerekmez.
+        guard CGPreflightScreenCaptureAccess() else {
+            NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: "/System/Applications/Utilities/Screenshot.app"), configuration: .init())
+            return
+        }
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.4) {
             // Seçilen alan panoya kopyalanır.
             Shell.run("/usr/sbin/screencapture", ["-i", "-c"], timeout: 120)

@@ -579,3 +579,5 @@
 "Verildi" = "Granted";
 "İzin ver" = "Allow";
 "İzinler" = "Permissions";
+"Ada'yı yeniden başlat" = "Restart Ada";
+"Ekran Kaydı ve Erişilebilirlik izinleri, verildikten sonra Ada yeniden başlatılınca geçerli olur. Sistem Ayarları'nda Ada açık göründüğü halde burada \"verildi\" yazmıyorsa, kayıt eski bir sürüme aittir: listede Ada'yı seçip eksi (–) ile silin, sonra buradan yeniden izin isteyin." = "Screen Recording and Accessibility permissions take effect after Ada restarts. If System Settings shows Ada as on but this page does not say \"granted\", the entry belongs to an older version: select Ada in the list, remove it with minus (–), then request the permission again here.";

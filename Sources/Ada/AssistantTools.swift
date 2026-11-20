@@ -591,6 +591,9 @@ enum ToolBox {
 
         case "look_at_screen":
             guard Prefs.shared.allowScreen else { return .fail("Screen viewing is turned off in Ada's settings.") }
+            guard CGPreflightScreenCaptureAccess() else {
+                return .fail("Ada does not have Screen Recording permission. The user can grant it in Ada's Settings › Permissions and then restart Ada.")
+            }
             let path = FileManager.default.temporaryDirectory.appendingPathComponent("ada-screen-\(UUID().uuidString).jpg").path
             // Çentik paneli görüntüye girmesin diye önce kapat.
             let wasExpanded = NotchModel.shared.expanded

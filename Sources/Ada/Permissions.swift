@@ -211,6 +211,11 @@ struct PermissionsSettings: View {
                     ForEach(other) { row($0) }
                 }
             }
+            Section {
+                Button(L("Ada'yı yeniden başlat")) { AppLanguage.relaunch() }
+            } footer: {
+                Text(L("Ekran Kaydı ve Erişilebilirlik izinleri, verildikten sonra Ada yeniden başlatılınca geçerli olur. Sistem Ayarları'nda Ada açık göründüğü halde burada \"verildi\" yazmıyorsa, kayıt eski bir sürüme aittir: listede Ada'yı seçip eksi (–) ile silin, sonra buradan yeniden izin isteyin."))
+            }
         }
         .formStyle(.grouped)
         .id(tick)
