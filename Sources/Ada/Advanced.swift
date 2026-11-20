@@ -118,6 +118,8 @@ final class NotificationWatcher: ObservableObject {
     private let queue = DispatchQueue(label: "ada.notifications")
 
     private static var dbPath: String? {
+        // Tam Disk Erişimi yokken dokunma: macOS "diğer uygulamaların verilerine erişim" penceresi açar.
+        guard FullDiskAccess.granted else { return nil }
         let candidates = [
             NSHomeDirectory() + "/Library/Group Containers/group.com.apple.usernoted/db2/db",
             (NSTemporaryDirectory() as NSString).deletingLastPathComponent + "/0/com.apple.notificationcenter/db2/db",
@@ -387,7 +389,8 @@ enum LockScreen {
     /// Pencereyi kilit ekranının üstünde duran ayrı bir alana taşır. Başarısız olursa hiçbir şey değişmez.
     @discardableResult
     static func attach(_ window: NSWindow) -> Bool {
-        guard !attached,
+        // Bu arayüz Ekran Kaydı izni ister; izin yoksa hiç denenmez ki her açılışta izin penceresi çıkmasın.
+        guard !attached, CGPreflightScreenCaptureAccess(),
               let h = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY),
               let cSym = dlsym(h, "SLSMainConnectionID"), let createSym = dlsym(h, "SLSSpaceCreate"),
               let levelSym = dlsym(h, "SLSSpaceSetAbsoluteLevel"), let showSym = dlsym(h, "SLSShowSpaces"),

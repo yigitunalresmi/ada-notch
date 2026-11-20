@@ -537,6 +537,12 @@ final class ModuleManager {
             .store(in: &bag)
     }
 
+    /// Ayarlar'dan bir izin verildiğinde: bekleyen servisleri yeniden dener.
+    func permissionsChanged() {
+        AgendaService.shared.recheck()
+        apply()
+    }
+
     private var optionsWork: DispatchWorkItem?
     private var intervals: [String: Double] = [:]
     private static let intervalKeys = ["music.poll", "weather.refresh", "ticker.refresh", "stats.interval"]

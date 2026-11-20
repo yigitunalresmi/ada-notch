@@ -67,18 +67,15 @@ final class AgendaService: ObservableObject {
 
     @objc private func storeChanged() { DispatchQueue.main.async { self.refresh() } }
 
+    /// İzin burada istenmez (bkz. Permissions.swift); yalnızca mevcut durum okunur.
     private func requestAndRefresh() {
-        if eventsOn {
-            store.requestFullAccessToEvents { granted, _ in
-                DispatchQueue.main.async { self.eventsDenied = !granted; self.refresh() }
-            }
-        }
-        if remindersOn {
-            store.requestFullAccessToReminders { granted, _ in
-                DispatchQueue.main.async { self.remindersDenied = !granted; self.refresh() }
-            }
-        }
+        eventsDenied = eventsOn && !canReadEvents
+        remindersDenied = remindersOn && !canReadReminders
+        refresh()
     }
+
+    /// Ayarlar'dan izin verildikten sonra çağrılır.
+    func recheck() { requestAndRefresh() }
 
     var canReadEvents: Bool { EKEventStore.authorizationStatus(for: .event) == .fullAccess }
     var canReadReminders: Bool { EKEventStore.authorizationStatus(for: .reminder) == .fullAccess }
@@ -236,8 +233,8 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
         if on {
             manager.delegate = self
             manager.desiredAccuracy = kCLLocationAccuracyKilometer
-            manager.requestWhenInUseAuthorization()
-            manager.requestLocation()
+            // Konum izni açılışta istenmez; verilmişse konum alınır.
+            if manager.authorizationStatus == .notDetermined { denied = true } else { manager.requestLocation() }
             let t = Timer(timeInterval: max(600, Opt.num("weather.refresh") * 60), repeats: true) { [weak self] _ in self?.manager.requestLocation() }
             RunLoop.main.add(t, forMode: .common)
             timer = t
@@ -245,6 +242,14 @@ final class WeatherService: NSObject, ObservableObject, CLLocationManagerDelegat
             timer?.invalidate(); timer = nil
             current = nil
         }
+    }
+
+    var authorization: CLAuthorizationStatus { manager.authorizationStatus }
+
+    /// Ayarlar › İzinler'deki düğmeyle çağrılır.
+    func requestPermission() {
+        manager.delegate = self
+        manager.requestWhenInUseAuthorization()
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {

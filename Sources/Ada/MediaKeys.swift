@@ -39,7 +39,7 @@ final class MediaKeyTap {
     private func install() {
         guard wanted, tap == nil else { return }
         guard AXIsProcessTrusted() else {
-            if !prompted { prompted = true; requestTrust() }
+            // İzin açılışta kendiliğinden istenmez; verilene kadar sessizce beklenir (Ayarlar › İzinler).
             if trustTimer == nil {
                 let t = Timer(timeInterval: 3, repeats: true) { [weak self] _ in self?.install() }
                 RunLoop.main.add(t, forMode: .common)

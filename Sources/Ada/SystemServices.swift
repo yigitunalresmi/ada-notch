@@ -1,6 +1,7 @@
 import AppKit
 import AudioToolbox
 import CoreAudio
+import CoreBluetooth
 import IOBluetooth
 import IOKit.ps
 import SwiftUI
@@ -111,12 +112,21 @@ final class BluetoothService: NSObject {
 
     func setEnabled(_ on: Bool) {
         if on, note == nil {
+            // Bluetooth izni açılışta istenmez; yalnızca zaten verilmişse dinlemeye başlanır.
+            guard CBCentralManager.authorization == .allowedAlways else { return }
             startedAt = Date()
             note = IOBluetoothDevice.register(forConnectNotifications: self, selector: #selector(connected(_:device:)))
         } else if !on, let n = note {
             n.unregister()
             note = nil
         }
+    }
+
+    /// Ayarlar › İzinler'deki düğmeyle çağrılır; macOS izin penceresini açar.
+    func requestPermission() {
+        guard note == nil else { return }
+        startedAt = Date()
+        note = IOBluetoothDevice.register(forConnectNotifications: self, selector: #selector(connected(_:device:)))
     }
 
     @objc private func connected(_ n: IOBluetoothUserNotification, device: IOBluetoothDevice) {

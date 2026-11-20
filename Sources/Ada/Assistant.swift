@@ -10,6 +10,15 @@ enum Keychain {
     private static let service = "app.ada.notch"
     private static let account = "anthropic-api-key"
 
+    /// Anahtar başka bir imzayla (ör. eski bir sürümle) kaydedildiyse macOS her okumada parola sorar.
+    /// Bir kez yeniden kaydedince öğe bu sürümün olur ve soru biter.
+    static func adoptIfNeeded() {
+        let flag = "keychainOwner", me = "developer-id-1"
+        guard UserDefaults.standard.string(forKey: flag) != me else { return }
+        if let value = get(), !value.isEmpty { set(value) }
+        UserDefaults.standard.set(me, forKey: flag)
+    }
+
     static func get() -> String? {
         let q: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

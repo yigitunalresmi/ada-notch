@@ -133,7 +133,8 @@ v1.0.9 ve öncesi yerel imzalıydı; o sürümlerden güncelleyenlerden macOS iz
 
 ## İzinler
 
-Ada yalnızca açtığınız modüllerin ihtiyaç duyduğu izinleri ister:
+Ada açılışta hiçbir izni kendiliğinden istemez. İzinler Ayarlar › İzinler sayfasından, istediğiniz zaman tek tek
+verilir; vermedikleriniz yalnızca ilgili özelliği kapalı tutar. Açık modüllerin kullandığı izinler:
 
 | İzin | Ne için |
 |---|---|

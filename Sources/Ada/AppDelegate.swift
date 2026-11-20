@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installMainMenu()
         Updater.shared.start()
         Scheduler.shared.start()
+        Keychain.adoptIfNeeded()
         // Geliştirme testi: açılışta güncellemeyi denetleyip kurar.
         if ProcessInfo.processInfo.environment["ADA_TEST_UPDATE"] != nil {
             Prefs.shared.autoInstallUpdates = true
@@ -33,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // İlk açılışta ayarlar penceresini göster (API anahtarı ve modüller için).
         if !UserDefaults.standard.bool(forKey: "firstRunDone") {
             UserDefaults.standard.set(true, forKey: "firstRunDone")
+            SettingsView.initialPage = .permissions
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.openSettings() }
         }
         if let t = ProcessInfo.processInfo.environment["ADA_TEST_BOOST"].flatMap(Double.init) {
