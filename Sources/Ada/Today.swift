@@ -194,7 +194,7 @@ struct TodayView: View {
                 hint(L("Bugün için henüz veri yok."))
             } else {
                 let top = usage.today.first?.seconds ?? 1
-                ForEach(usage.today.prefix(5)) { e in
+                ForEach(usage.today.prefix(Prefs.shared.compact ? 4 : 5)) { e in
                     HStack(spacing: 6) {
                         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: e.bundle) {
                             Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 15, height: 15)
@@ -233,7 +233,7 @@ struct TodayView: View {
             row("brain.head.profile", L("Bugün odak"), FocusStats.text(focus.today))
             if !s.top.isEmpty {
                 SectionTitle(text: L("En çok işlemci kullanan")).padding(.top, 3)
-                ForEach(Array(s.top.enumerated()), id: \.offset) { _, p in
+                ForEach(Array(s.top.prefix(Prefs.shared.compact ? 2 : 3).enumerated()), id: \.offset) { _, p in
                     HStack {
                         Text(p.name).lineLimit(1)
                         Spacer(minLength: 4)

@@ -57,7 +57,7 @@ struct ShelfView: View {
                         ForEach(shelf.items, id: \.self) { url in
                             VStack(spacing: 5) {
                                 Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
-                                    .resizable().frame(width: 62, height: 62)
+                                    .resizable().frame(width: Prefs.shared.compact ? 46 : 62, height: Prefs.shared.compact ? 46 : 62)
                                 Text(url.lastPathComponent)
                                     .font(.system(size: 10.5)).lineLimit(2).multilineTextAlignment(.center)
                                     .frame(width: 92)
@@ -313,7 +313,7 @@ struct ToolsView: View {
     @AppStorage("notesMode") private var notesMode = "note"
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: prefs.compact ? 6 : 8) {
             HStack(alignment: .top, spacing: 14) {
                 if prefs.isOn(.timer) { timerColumn.frame(width: 150) }
                 if prefs.isOn(.clipboard) { clipboardColumn.frame(maxWidth: .infinity) }
@@ -321,12 +321,13 @@ struct ToolsView: View {
             }
             .frame(maxHeight: .infinity)
             QuickActionsRow()
-            if prefs.isOn(.stats) { statsRow }
+            // Yassı düzende istatistik satırı gösterilmez (Bugün sekmesinde de var).
+            if prefs.isOn(.stats), !prefs.compact { statsRow }
         }
     }
 
     private var timerColumn: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: prefs.compact ? 5 : 8) {
             SectionTitle(text: L("Zamanlayıcı"))
             if countdown.running {
                 Text(formatClock(countdown.remaining))
@@ -339,7 +340,7 @@ struct ToolsView: View {
                     .tint(.orange)
                 Button(L("Durdur")) { countdown.stop() }.buttonStyle(PillButtonStyle(tint: .red.opacity(0.6)))
             } else {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: prefs.compact ? 4 : 6) {
                     ForEach(CountdownService.presets, id: \.self) { m in
                         Button(Lf("%@ dk", "\(m)")) { countdown.start(minutes: Double(m)) }
                             .buttonStyle(PillButtonStyle())

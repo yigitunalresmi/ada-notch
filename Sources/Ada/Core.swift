@@ -245,7 +245,7 @@ final class Prefs: ObservableObject {
         allowWeb = d.object(forKey: "allowWeb") as? Bool ?? true
         glassClarity = d.object(forKey: "glassClarity") as? Double ?? 0.6
         expandedWidth = d.object(forKey: "expandedWidth") as? Double ?? 720
-        expandedHeight = d.object(forKey: "expandedHeight") as? Double ?? 240
+        expandedHeight = d.object(forKey: "expandedHeight") as? Double ?? 196
         cornerRadius = d.object(forKey: "cornerRadius") as? Double ?? 30
         accent = d.object(forKey: "accent") as? String ?? "blue"
         showMusicWings = d.object(forKey: "showMusicWings") as? Bool ?? true
@@ -303,6 +303,9 @@ final class Prefs: ObservableObject {
         let saved = tabOrder.compactMap(NotchTab.init(rawValue:))
         return saved + NotchTab.allCases.filter { !saved.contains($0) }
     }
+
+    /// Yassı düzen: az yükseklikte sekmeler başlıkları ve ikincil satırları atlayarak sıkışır.
+    var compact: Bool { expandedHeight < 225 }
 
     var accentColor: Color { Self.accents.first { $0.id == accent }?.color ?? .blue }
 

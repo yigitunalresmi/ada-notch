@@ -607,11 +607,11 @@ struct AppearanceSettings: View {
 
             Section(L("Boyut")) {
                 slider(L("Genişlik"), $prefs.expandedWidth, 560...880, unit: "pt")
-                slider(L("Yükseklik"), $prefs.expandedHeight, 200...400, unit: "pt")
+                slider(L("Yükseklik"), $prefs.expandedHeight, 170...400, unit: "pt")
                 slider(L("Köşe yuvarlaklığı"), $prefs.cornerRadius, 8...48, unit: "pt")
                 Button(L("Varsayılan boyuta dön")) {
                     prefs.expandedWidth = 720
-                    prefs.expandedHeight = 240
+                    prefs.expandedHeight = 196
                     prefs.cornerRadius = 30
                 }
             }

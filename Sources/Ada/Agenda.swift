@@ -349,7 +349,8 @@ struct AgendaColumn: View {
 
     var body: some View {
         let tall = prefs.expandedHeight >= 290
-        VStack(alignment: .leading, spacing: tall ? 10 : 7) {
+        let compact = prefs.compact
+        VStack(alignment: .leading, spacing: tall ? 10 : (compact ? 5 : 7)) {
             if prefs.isOn(.weather) {
                 weatherRow
                     .contentShape(Rectangle())
@@ -362,8 +363,8 @@ struct AgendaColumn: View {
                 ForecastStrip().transition(.blurReplace)
             }
             if prefs.isOn(.calendar), !showForecast {
-                VStack(alignment: .leading, spacing: 5) {
-                    SectionTitle(text: L("Yaklaşan"))
+                VStack(alignment: .leading, spacing: compact ? 3 : 5) {
+                    if !compact { SectionTitle(text: L("Yaklaşan")) }
                     if agenda.eventsDenied {
                         hint(L("Takvim izni verilmedi"))
                     } else if agenda.events.isEmpty {
@@ -371,10 +372,16 @@ struct AgendaColumn: View {
                     } else {
                         ForEach(agenda.events.prefix(max(1, Int(Opt.num("calendar.count"))))) { e in
                             HStack(spacing: 7) {
-                                Capsule().fill(e.color).frame(width: 3, height: 26)
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(e.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
-                                    Text(when(e)).font(.system(size: 10)).foregroundStyle(.white.opacity(0.5))
+                                Capsule().fill(e.color).frame(width: 3, height: compact ? 13 : 26)
+                                if compact {
+                                    // Yassı düzende başlık ve saat tek satırda
+                                    Text(e.title).font(.system(size: 11.5, weight: .medium)).lineLimit(1)
+                                    Text(when(e)).font(.system(size: 10)).foregroundStyle(.white.opacity(0.5)).lineLimit(1).layoutPriority(1)
+                                } else {
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(e.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                                        Text(when(e)).font(.system(size: 10)).foregroundStyle(.white.opacity(0.5))
+                                    }
                                 }
                                 if let url = e.url {
                                     Spacer(minLength: 4)
@@ -387,8 +394,8 @@ struct AgendaColumn: View {
                 }
             }
             if prefs.isOn(.reminders), !showForecast {
-                VStack(alignment: .leading, spacing: 4) {
-                    SectionTitle(text: L("Anımsatıcılar"))
+                VStack(alignment: .leading, spacing: compact ? 3 : 4) {
+                    if !compact { SectionTitle(text: L("Anımsatıcılar")) }
                     if agenda.remindersDenied {
                         hint(L("Anımsatıcı izni verilmedi"))
                     } else if agenda.reminders.isEmpty {
@@ -413,18 +420,32 @@ struct AgendaColumn: View {
 
     @ViewBuilder private var weatherRow: some View {
         if let w = weather.current {
-            HStack(spacing: 10) {
-                Image(systemName: w.symbol).symbolRenderingMode(.multicolor).font(.system(size: 24))
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("\(prefs.temp(w.temperature))°").font(.system(size: 20, weight: .semibold))
-                        Text(w.summary).font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
-                    }
-                    HStack(spacing: 6) {
-                        if !w.place.isEmpty { Text(w.place) }
-                        if let h = w.high, let l = w.low { Text("↑\(prefs.temp(h))°  ↓\(prefs.temp(l))°") }
+            if prefs.compact {
+                // Yassı düzen: tek satır
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: w.symbol).symbolRenderingMode(.multicolor).font(.system(size: 15))
+                    Text("\(prefs.temp(w.temperature))°").font(.system(size: 16, weight: .semibold))
+                    Text(w.summary).font(.system(size: 11.5)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+                    Group {
+                        if !w.place.isEmpty { Text(w.place).lineLimit(1) }
+                        if let h = w.high, let l = w.low { Text("↑\(prefs.temp(h))° ↓\(prefs.temp(l))°").lineLimit(1).layoutPriority(1) }
                     }
                     .font(.system(size: 10)).foregroundStyle(.white.opacity(0.45))
+                }
+            } else {
+                HStack(spacing: 10) {
+                    Image(systemName: w.symbol).symbolRenderingMode(.multicolor).font(.system(size: 24))
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text("\(prefs.temp(w.temperature))°").font(.system(size: 20, weight: .semibold))
+                            Text(w.summary).font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                        }
+                        HStack(spacing: 6) {
+                            if !w.place.isEmpty { Text(w.place) }
+                            if let h = w.high, let l = w.low { Text("↑\(prefs.temp(h))°  ↓\(prefs.temp(l))°") }
+                        }
+                        .font(.system(size: 10)).foregroundStyle(.white.opacity(0.45))
+                    }
                 }
             }
         } else {
