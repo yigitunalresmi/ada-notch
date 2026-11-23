@@ -74,6 +74,11 @@ final class NotchController: NSObject, NSWindowDelegate {
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
 
         if let holdTab { model.expand(tab: holdTab) }
+        // Geliştirme testi: ADA_TEST_CLOSE ile çentik açılır ve 4. saniyede kapanır (kapanışı kare kare yakalamak için).
+        if ProcessInfo.processInfo.environment["ADA_TEST_CLOSE"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.previewUntil = Date().addingTimeInterval(2.5); self.model.expand(tab: .home) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { self.previewUntil = .distantPast; self.close() }
+        }
         NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] e in
             self?.handleScroll(e)
             return e
@@ -214,9 +219,13 @@ final class NotchController: NSObject, NSWindowDelegate {
 
     func close() {
         model.collapse()
-        if panel.isKeyWindow {
-            panel.orderOut(nil)
-            panel.orderFrontRegardless()
+        // Klavye odağı öndeki uygulamaya geri verilir. Pencereyi hemen gizleyip göstermek kapanış
+        // animasyonunu keserdi; bu yüzden animasyon bittikten sonra yapılır.
+        guard panel.isKeyWindow else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            guard let self, !self.model.expanded, self.panel.isKeyWindow else { return }
+            self.panel.orderOut(nil)
+            self.panel.orderFrontRegardless()
         }
     }
 

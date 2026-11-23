@@ -54,14 +54,22 @@ struct NotchRootView: View {
                 .shadow(color: .black.opacity(!model.expanded && prefs.wingFeather && size.width > model.notchSize.width + 1 ? 0.7 : 0), radius: 5, y: 1)
             Group {
                 if model.expanded {
+                    // İçerik her zaman açık boyutta dizilir; çentik küçülürken yeniden dizilmek yerine kırpılır ve solar.
                     ExpandedView()
-                        .transition(.blurReplace.combined(with: .scale(0.95, anchor: .top)))
+                        .frame(width: model.expandedSize.width, height: model.expandedSize.height)
+                        .transition(AnyTransition.asymmetric(
+                            insertion: AnyTransition(.blurReplace).combined(with: .scale(scale: 0.95, anchor: .top)),
+                            removal: AnyTransition.opacity.animation(.easeOut(duration: 0.12))))
                 } else {
+                    // Kanat içeriği, çentik küçüldükten sonra belirir.
                     CollapsedView()
-                        .transition(.opacity)
+                        .frame(width: size.width, height: size.height)
+                        .transition(AnyTransition.asymmetric(
+                            insertion: AnyTransition.opacity.animation(.easeIn(duration: 0.16).delay(0.2)),
+                            removal: AnyTransition.opacity.animation(.easeOut(duration: 0.08))))
                 }
             }
-            .frame(width: size.width, height: size.height)
+            .frame(width: size.width, height: size.height, alignment: .top)
             .clipShape(shape)
         }
         .frame(width: size.width, height: size.height)
@@ -86,7 +94,8 @@ struct NotchRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .overlay { CelebrationLayer() }
-        .animation(.spring(response: 0.38, dampingFraction: 0.76), value: size)
+        // Açılırken hafif yaylanır; kapanırken yaylanmaz, yoksa şekil çentiğin içine doğru taşar.
+        .animation(model.expanded ? .spring(response: 0.38, dampingFraction: 0.76) : .smooth(duration: 0.32), value: size)
         .animation(.spring(response: 0.32, dampingFraction: 0.82), value: model.tab)
         .animation(.easeInOut(duration: 0.3), value: engine.busy)
         .animation(.easeInOut(duration: 0.25), value: model.hud)
@@ -102,9 +111,11 @@ struct NotchBackground: View {
     /// Üstteki tam siyah şeridin yüksekliğe oranı.
     var blackBand: CGFloat
     @ObservedObject var prefs = Prefs.shared
+    /// Kapanış animasyonu bitene kadar temalı zemin yerinde kalır; sonra kaldırılır ki boşta çizim yapmasın.
+    @State private var themed = false
 
     var body: some View {
-        let theme = expanded ? prefs.theme : "black"
+        let theme = (expanded || themed) ? prefs.theme : "black"
         let c1 = prefs.themeColor1, c2 = prefs.themeColor2
         ZStack {
             if theme == "black" {
@@ -131,8 +142,19 @@ struct NotchBackground: View {
                     .init(color: .black.opacity(0.5 * blend), location: 1),
                 ], startPoint: .top, endPoint: .bottom))
                 border(theme, c1, c2)
+                // Kapanırken siyah, temalı zeminin üzerine yumuşakça gelir.
+                shape.fill(Color.black).opacity(expanded ? 0 : 1)
             }
         }
+        .animation(.easeInOut(duration: 0.24), value: expanded)
+        .onChange(of: expanded) { _, isOpen in
+            if isOpen {
+                themed = true
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { if !self.expanded { themed = false } }
+            }
+        }
+        .onAppear { themed = expanded }
     }
 
     @ViewBuilder private func glass(dark: Double, clear: Bool) -> some View {
