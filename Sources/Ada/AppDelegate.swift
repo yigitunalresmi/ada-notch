@@ -25,7 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Prefs.shared.autoInstallUpdates = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { Updater.shared.check() }
         }
-        if ProcessInfo.processInfo.environment["ADA_TEST_SETTINGS"] != nil {
+        if let v = ProcessInfo.processInfo.environment["ADA_TEST_SETTINGS"] {
+            if let page = SettingsPage(rawValue: v) { SettingsView.initialPage = page }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.openSettings() }
         }
         if ProcessInfo.processInfo.environment["ADA_TEST_CONFETTI"] != nil {

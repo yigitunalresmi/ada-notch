@@ -2,7 +2,7 @@ import ServiceManagement
 import SwiftUI
 
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case modules, appearance, assistant, general, permissions, updates
+    case modules, appearance, assistant, general, power, permissions, updates
     var id: String { rawValue }
 
     var title: String {
@@ -11,6 +11,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .appearance: return L("Görünüm")
         case .assistant: return L("Asistan")
         case .general: return L("Genel")
+        case .power: return L("Güç")
         case .permissions: return L("İzinler")
         case .updates: return L("Güncellemeler")
         }
@@ -22,6 +23,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .appearance: return "paintbrush.fill"
         case .assistant: return "sparkles"
         case .general: return "gearshape.fill"
+        case .power: return "bolt.fill"
         case .permissions: return "hand.raised.fill"
         case .updates: return "arrow.down.circle.fill"
         }
@@ -33,6 +35,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .appearance: return .purple
         case .assistant: return .orange
         case .general: return .gray
+        case .power: return .yellow
         case .permissions: return .red
         case .updates: return .green
         }
@@ -64,6 +67,7 @@ struct SettingsView: View {
                     case .appearance: AppearanceSettings()
                     case .assistant: AssistantSettings()
                     case .general: GeneralSettings()
+                    case .power: PowerSettings()
                     case .permissions: PermissionsSettings()
                     case .updates: UpdatesSettings()
                     }
