@@ -455,11 +455,16 @@ struct TopBar: View {
                         .symbolEffect(.bounce, value: w.code)
                 }
                 if prefs.isOn(.battery), let level = battery.level {
-                    HStack(spacing: 3) {
-                        Image(systemName: battery.symbol)
-                            .foregroundStyle(battery.onAC ? .green : (level <= 20 ? .red : .white))
-                        Text("%\(level)").contentTransition(.numericText())
+                    // Pile tıklanınca Ayarlar'ın Güç sayfası açılır.
+                    Button { AppDelegate.showSettings(page: .power) } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: battery.symbol)
+                                .foregroundStyle(battery.onAC ? .green : (level <= 20 ? .red : .white))
+                            Text("%\(level)").contentTransition(.numericText())
+                        }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     .help(battery.timeRemaining)
                     .animation(.default, value: level)
                 }

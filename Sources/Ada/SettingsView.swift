@@ -1,3 +1,4 @@
+import Combine
 import ServiceManagement
 import SwiftUI
 
@@ -45,6 +46,8 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 struct SettingsView: View {
     /// İlk açılışta İzinler sayfası gösterilir.
     static var initialPage: SettingsPage = .modules
+    /// Pencere zaten açıkken başka bir sayfaya geçmek için (ör. çentikteki pil simgesi).
+    static let pageRequest = PassthroughSubject<SettingsPage, Never>()
     @State private var page: SettingsPage = SettingsView.initialPage
     @ObservedObject var updater = Updater.shared
     @ObservedObject var prefs = Prefs.shared
@@ -79,6 +82,7 @@ struct SettingsView: View {
         }
         .frame(width: 800, height: 600)
         .animation(.easeInOut(duration: 0.18), value: page)
+        .onReceive(SettingsView.pageRequest) { page = $0 }
     }
 
     private var sidebar: some View {

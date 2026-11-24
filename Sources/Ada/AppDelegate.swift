@@ -29,6 +29,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let page = SettingsPage(rawValue: v) { SettingsView.initialPage = page }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.openSettings() }
         }
+        if ProcessInfo.processInfo.environment["ADA_TEST_POWER"] != nil {
+            // Geliştirme testi: ayarlar açıkken pil simgesine tıklanmış gibi Güç sayfasına geçer.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.openSettings() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { AppDelegate.showSettings(page: .power) }
+        }
         if ProcessInfo.processInfo.environment["ADA_TEST_CONFETTI"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { NotchModel.shared.celebration += 1 }
         }
@@ -126,7 +131,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func quit() { NSApp.terminate(nil) }
 
-    static func showSettings() {
+    static func showSettings(page: SettingsPage? = nil) {
+        if let page {
+            SettingsView.initialPage = page
+            SettingsView.pageRequest.send(page)
+        }
         (NSApp.delegate as? AppDelegate)?.openSettings()
     }
 }
